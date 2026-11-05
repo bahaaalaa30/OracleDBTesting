@@ -17,13 +17,13 @@ import type {
   StructureComparisonResult,
 } from '@/types';
 
-const client: AxiosInstance = axios.create({
+export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 60_000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-client.interceptors.response.use(
+apiClient.interceptors.response.use(
   (r) => r,
   (error: AxiosError<{ message?: string; error?: string }>) => {
     const msg =
@@ -220,7 +220,7 @@ export async function exportReport(req: {
 }
 
 export async function getReport(reportId: string): Promise<ComparisonResult> {
-  const { data } = await client.get<ComparisonResult>(`/reports/${reportId}`);
+  const { data } = await client.get<ComparisonResult>(`/reports/${encodeURIComponent(reportId)}`);
   return data;
 }
 
