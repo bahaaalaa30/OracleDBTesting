@@ -77,30 +77,35 @@ export function ExplorerView() {
   const toggleSelect = (obj: DatabaseObject) => {
     const key = `${obj.schema}.${obj.name}`;
     const autoMatch = findAutoMatch(obj);
-    setSelectedOld((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
+    if (selectedOld.has(key)) {
+      setSelectedOld((prev) => {
+        const next = new Set(prev);
         next.delete(key);
-        setSelectedNewByOld((current) => {
-          const updated = { ...current };
-          delete updated[key];
-          return updated;
-        });
-      } else {
-        next.add(key);
-        if (autoMatch) {
-          setSelectedNewByOld((current) => ({
-            ...current,
-            [key]: `${autoMatch.schema}.${autoMatch.name}`,
-          }));
-        }
-      }
-      return next;
-    });
+        return next;
+      });
+      setSelectedNewByOld((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+    setSelectedOld((prev) => new Set(prev).add(key));
+    if (autoMatch) {
+      setSelectedNewByOld((prev) => ({ ...prev, [key]: `${autoMatch.schema}.${autoMatch.name}` }));
+    }
   };
 
   const selectAllVisible = () => {
     setSelectedOld(new Set(filteredOld.map((o) => `${o.schema}.${o.name}`)));
+    setSelectedNewByOld((prev) => {
+      const next = { ...prev };
+      filteredOld.forEach((obj) => {
+        const autoMatch = findAutoMatch(obj);
+        if (autoMatch) next[`${obj.schema}.${obj.name}`] = `${autoMatch.schema}.${autoMatch.name}`;
+      });
+      return next;
+    });
   };
 
   const clearSelection = () => {
@@ -139,6 +144,7 @@ export function ExplorerView() {
       });
     }
     setSelectedTables(pairs);
+    setActiveTable(null);
     setView('structure');
   };
 
@@ -219,7 +225,7 @@ export function ExplorerView() {
           title="Selected Tables"
           description={`${selectedOld.size} Old table(s) selected. Choose a matching New table for each one.`}
           actions={
-            <Button size="sm" onClick={confirmSelections}>
+            <Button size="sm" onClick={confirmSelections} disabled={Array.from(selectedOld).some((key) => !selectedNewByOld[key])}>
               Compare Structure <ArrowRight size={14} />
             </Button>
           }
