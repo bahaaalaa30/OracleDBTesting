@@ -42,21 +42,21 @@ export interface ApiErrorShape {
 // ---------- Connections ----------
 
 export async function testConnection(cfg: Omit<ConnectionConfig, 'id'>): Promise<ConnectionStatus> {
-  const { data } = await client.post<ConnectionStatus>('/connections/test', cfg);
+  const { data } = await apiClient.post<ConnectionStatus>('/connections/test', cfg);
   return data;
 }
 
 export async function connectDatabase(cfg: ConnectionConfig): Promise<ConnectionStatus> {
-  const { data } = await client.post<ConnectionStatus>('/connections/connect', cfg);
+  const { data } = await apiClient.post<ConnectionStatus>('/connections/connect', cfg);
   return data;
 }
 
 export async function disconnectDatabase(id: 'old' | 'new'): Promise<void> {
-  await client.post('/connections/disconnect', { id });
+  await apiClient.post('/connections/disconnect', { id });
 }
 
 export async function getConnectionStatus(): Promise<Record<'old' | 'new', ConnectionStatus>> {
-  const { data } = await client.get<Record<'old' | 'new', ConnectionStatus>>(
+  const { data } = await apiClient.get<Record<'old' | 'new', ConnectionStatus>>(
     '/connections/status',
   );
   return data;
@@ -67,17 +67,17 @@ export async function getConnectionStatus(): Promise<Record<'old' | 'new', Conne
 export async function getDatabaseObjects(id: 'old' | 'new', type?: string) {
   const params: Record<string, string> = { id };
   if (type) params.type = type;
-  const { data } = await client.get('/database/objects', { params });
+  const { data } = await apiClient.get('/database/objects', { params });
   return data;
 }
 
 export async function getTables(id: 'old' | 'new') {
-  const { data } = await client.get('/database/tables', { params: { id } });
+  const { data } = await apiClient.get('/database/tables', { params: { id } });
   return data;
 }
 
 export async function getViews(id: 'old' | 'new') {
-  const { data } = await client.get('/database/views', { params: { id } });
+  const { data } = await apiClient.get('/database/views', { params: { id } });
   return data;
 }
 
@@ -86,7 +86,7 @@ export async function getTableStructure(
   schema: string,
   tableName: string,
 ) {
-  const { data } = await client.get(`/database/table/${encodeURIComponent(tableName)}/structure`, {
+  const { data } = await apiClient.get(`/database/table/${encodeURIComponent(tableName)}/structure`, {
     params: { id, schema },
   });
   return data;
@@ -97,7 +97,7 @@ export async function getTableConstraints(
   schema: string,
   tableName: string,
 ) {
-  const { data } = await client.get(
+  const { data } = await apiClient.get(
     `/database/table/${encodeURIComponent(tableName)}/constraints`,
     { params: { id, schema } },
   );
@@ -109,7 +109,7 @@ export async function getTableIndexes(
   schema: string,
   tableName: string,
 ) {
-  const { data } = await client.get(
+  const { data } = await apiClient.get(
     `/database/table/${encodeURIComponent(tableName)}/indexes`,
     { params: { id, schema } },
   );
@@ -119,7 +119,7 @@ export async function getTableIndexes(
 // ---------- Data ----------
 
 export async function previewData(req: DataPreviewRequest): Promise<DataPreviewResponse> {
-  const { data } = await client.post<DataPreviewResponse>('/data/preview', req);
+  const { data } = await apiClient.post<DataPreviewResponse>('/data/preview', req);
   return data;
 }
 
@@ -128,7 +128,7 @@ export async function countRows(
   schema: string,
   tableName: string,
 ): Promise<number> {
-  const { data } = await client.post<{ count: number }>('/data/count', {
+  const { data } = await apiClient.post<{ count: number }>('/data/count', {
     id,
     schema,
     tableName,
@@ -137,7 +137,7 @@ export async function countRows(
 }
 
 export async function compareData(req: DataComparisonRequest): Promise<DataComparisonResult> {
-  const { data } = await client.post<DataComparisonResult>('/data/compare', req);
+  const { data } = await apiClient.post<DataComparisonResult>('/data/compare', req);
   return data;
 }
 
@@ -146,21 +146,21 @@ export async function compareData(req: DataComparisonRequest): Promise<DataCompa
 export async function compareStructure(
   req: StructureComparisonRequest,
 ): Promise<StructureComparisonResult> {
-  const { data } = await client.post<StructureComparisonResult>('/comparison/structure', req);
+  const { data } = await apiClient.post<StructureComparisonResult>('/comparison/structure', req);
   return data;
 }
 
 export async function suggestColumnMappings(
   req: Omit<ColumnMappingRequest, 'mappings'>,
 ) {
-  const { data } = await client.post('/comparison/columns/mapping', req);
+  const { data } = await apiClient.post('/comparison/columns/mapping', req);
   return data;
 }
 
 export async function executeStructureComparison(
   req: ColumnMappingRequest,
 ): Promise<StructureComparisonResult> {
-  const { data } = await client.post<StructureComparisonResult>(
+  const { data } = await apiClient.post<StructureComparisonResult>(
     '/comparison/structure/execute',
     req,
   );
@@ -172,12 +172,12 @@ export async function executeStructureComparison(
 export async function discoverForms(
   req: DiscoveryRequest,
 ): Promise<DiscoveryCandidate[]> {
-  const { data } = await client.post<DiscoveryCandidate[]>('/forms/discover', req);
+  const { data } = await apiClient.post<DiscoveryCandidate[]>('/forms/discover', req);
   return data;
 }
 
 export async function getMetadataCandidates(id: 'old' | 'new') {
-  const { data } = await client.get('/forms/metadata-candidates', { params: { id } });
+  const { data } = await apiClient.get('/forms/metadata-candidates', { params: { id } });
   return data;
 }
 
@@ -185,11 +185,11 @@ export async function configureMetadata(
   id: 'old' | 'new',
   config: MetadataSourceConfig,
 ): Promise<void> {
-  await client.post('/forms/metadata/configure', { id, config });
+  await apiClient.post('/forms/metadata/configure', { id, config });
 }
 
 export async function getFormsList(id: 'old' | 'new') {
-  const { data } = await client.get('/forms/list', { params: { id } });
+  const { data } = await apiClient.get('/forms/list', { params: { id } });
   return data;
 }
 
@@ -197,12 +197,12 @@ export async function compareForms(req: {
   oldConfig: MetadataSourceConfig;
   newConfig: MetadataSourceConfig;
 }): Promise<FormComparisonResult[]> {
-  const { data } = await client.post<FormComparisonResult[]>('/forms/compare', req);
+  const { data } = await apiClient.post<FormComparisonResult[]>('/forms/compare', req);
   return data;
 }
 
 export async function getFormDetails(id: 'old' | 'new', formId: string) {
-  const { data } = await client.get(`/forms/${encodeURIComponent(formId)}/details`, {
+  const { data } = await apiClient.get(`/forms/${encodeURIComponent(formId)}/details`, {
     params: { id },
   });
   return data;
@@ -215,12 +215,12 @@ export async function exportReport(req: {
   format: 'XLSX' | 'CSV' | 'PDF';
   maskPatientData: boolean;
 }): Promise<Blob> {
-  const { data } = await client.post('/reports/export', req, { responseType: 'blob' });
+  const { data } = await apiClient.post('/reports/export', req, { responseType: 'blob' });
   return data;
 }
 
 export async function getReport(reportId: string): Promise<ComparisonResult> {
-  const { data } = await client.get<ComparisonResult>(`/reports/${encodeURIComponent(reportId)}`);
+  const { data } = await apiClient.get<ComparisonResult>(`/reports/${encodeURIComponent(reportId)}`);
   return data;
 }
 
