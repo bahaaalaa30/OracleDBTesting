@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plug, RefreshCw, Trash2, Zap, Link2, Link2Off } from 'lucide-react';
+import { Plug, RefreshCw, Zap, Link2, Link2Off, Copy } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -35,6 +35,21 @@ function ConnectionPanel({ side }: { side: Side }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
+
+  const copyOldSettings = () => {
+    const source = connections.old;
+    updateConnection('new', {
+      host: source.host,
+      port: source.port,
+      serviceName: source.serviceName,
+      sid: source.sid,
+      username: source.username,
+      password: source.password,
+      mode: source.mode,
+    });
+    setTestResult(null);
+    setError(null);
+  };
 
   const update = (patch: Partial<ConnectionConfig>) => {
     updateConnection(side, patch);
@@ -102,6 +117,20 @@ function ConnectionPanel({ side }: { side: Side }) {
       </div>
 
       {error && <div className="mb-4"><ErrorBanner message={error} onDismiss={() => setError(null)} /></div>}
+
+      {side === 'new' && (
+        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3 dark:border-blue-900/50 dark:bg-blue-900/10">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">Reuse Old Connection Settings</p>
+              <p className="text-xs text-blue-700/80 dark:text-blue-300/80">Copy host, port, service/SID and credentials. You can keep or edit them independently.</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={copyOldSettings}>
+              <Copy size={13} /> Copy from Old
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <Input
