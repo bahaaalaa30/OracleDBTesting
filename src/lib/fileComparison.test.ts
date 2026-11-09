@@ -81,6 +81,3 @@ describe('JSON file comparison', () => {
     expect(result.summary.moved).toBe(2);
   });
 });
-
-describe('CSV file comparison', () => {
-  it('parses quot
