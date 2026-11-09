@@ -41,7 +41,7 @@ describe('JSON file comparison', () => {
     expect(result.diffs.some((diff) => diff.path.includes('promptId'))).toBe(true);
   });
 
-  it('matches Form Studio elements by name and reports nested property changes', () => {
+  it('matches Form Studio elements by name, ignores metadata, and reports functional changes', () => {
     const oldForm = {
       title: 'PEDIATRIC ASSESSMENT',
       pages: [{ name: 'page1', elements: [{ type: 'panel', name: 'panel_1', elements: [
@@ -58,7 +58,7 @@ describe('JSON file comparison', () => {
 
     const result = compareJson(oldForm, newForm, { mode: 'form-studio' });
     expect(result.diffs.some((diff) => diff.kind === 'CHANGED' && diff.path.includes('isRequired'))).toBe(true);
-    expect(result.diffs.some((diff) => diff.kind === 'CHANGED' && diff.path.includes('promptId'))).toBe(true);
+    expect(result.diffs.some((diff) => diff.path.includes('adeaMeta'))).toBe(false);
     expect(result.diffs.some((diff) => diff.kind === 'ADDED' && diff.path.includes('C_NEW'))).toBe(true);
     expect(result.diffs.some((diff) => diff.kind === 'MOVED')).toBe(false);
   });
