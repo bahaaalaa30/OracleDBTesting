@@ -73,7 +73,6 @@ export function FileComparisonView() {
   const [ddlResult, setDdlResult] = useState<ReturnType<typeof compareDdl> | null>(null);
   const [formMode, setFormMode] = useState<FormMode>('form-studio');
   const [compareOrder, setCompareOrder] = useState(false);
-  const [ignoreSectionTitle, setIgnoreSectionTitle] = useState(false);
   const [oldKey, setOldKey] = useState('');
   const [newKey, setNewKey] = useState('');
   const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
@@ -121,7 +120,6 @@ export function FileComparisonView() {
       const result = compareJson(oldValue, newValue, {
         mode: formMode,
         compareArrayOrder: compareOrder,
-        ignorePaths: ignoreSectionTitle ? ['adeaMeta.sectionTitle'] : [],
       });
       setJsonResult(result);
       setCsvResult(null);
@@ -218,13 +216,16 @@ export function FileComparisonView() {
                   <input type="checkbox" checked={compareOrder} onChange={(e) => setCompareOrder(e.target.checked)} />
                   Treat array order changes as differences
                 </label>
-                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                  <input type="checkbox" checked={ignoreSectionTitle} onChange={(e) => setIgnoreSectionTitle(e.target.checked)} />
-                  Ignore adeaMeta.sectionTitle
-                </label>
+                {formMode === 'form-studio' && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Form Studio automatically ignores adeaMeta, treats missing isRequired as false,
+                    normalizes blank titles, and treats empty choices as missing. Functional field
+                    changes remain visible.
+                  </p>
+                )}
               </div>
             </div>
-            <p className="mt-3 text-xs text-slate-500">Form Studio mode matches pages and elements by stable names/IDs, then checks nested properties including adeaMeta. Object property order and whitespace are ignored.</p>
+            <p className="mt-3 text-xs text-slate-500">Form Studio mode matches pages and elements by stable names/IDs. It normalizes editor metadata and empty/default values while retaining functional configuration differences.</p>
           </div>
         ) : (
           <div className="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
