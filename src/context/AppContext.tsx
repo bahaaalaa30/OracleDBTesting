@@ -4,6 +4,7 @@ import {
   useContext,
   useMemo,
   useState,
+  useEffect,
   type ReactNode,
 } from 'react';
 import type {
@@ -15,6 +16,15 @@ import type {
 } from '@/types';
 import { DEFAULT_PORT } from '@/lib/config';
 import { setApiDemoMode } from '@/lib/api';
+import type { FormListComparisonResult } from '@/lib/formListComparison';
+
+export interface FormListHistoryEntry {
+  id: string;
+  executedAt: string;
+  oldFileName: string;
+  newFileName: string;
+  result: FormListComparisonResult;
+}
 
 interface TableSelection {
   oldSchema: string;
@@ -50,6 +60,8 @@ interface AppState {
   disableDemoMode: () => void;
   results: ComparisonResult[];
   addResults: (r: ComparisonResult[]) => void;
+  formListHistory: FormListHistoryEntry[];
+  addFormListHistory: (entry: FormListHistoryEntry) => void;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -87,6 +99,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [oldMetadata, setOldMetadata] = useState<MetadataSourceConfig | null>(null);
   const [newMetadata, setNewMetadata] = useState<MetadataSourceConfig | null>(null);
   const [results, setResults] = useState<ComparisonResult[]>([]);
+  const [formListHistory, setFormListHistory] = useState<FormListHistoryEntry[]>(() => {
+    try { return JSON.parse(localStorage.getItem('form-studio-comparison-history') ?? '[]') as FormListHistoryEntry[]; }
+    catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem('form-studio-comparison-history', JSON.stringify(formListHistory)); }, [formListHistory]);
+  const addFormListHistory = useCallback((entry: FormListHistoryEntry) => setFormListHistory((previous) => [entry, ...previous]), []);
   const [demoMode, setDemoMode] = useState(false);
 
   const enableDemoMode = useCallback(() => {
@@ -179,6 +197,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       disableDemoMode,
       results,
       addResults,
+      formListHistory,
+      addFormListHistory,
     }),
     [
       view,
@@ -200,6 +220,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       disableDemoMode,
       results,
       addResults,
+      formListHistory,
+      addFormListHistory,
     ],
   );
 
