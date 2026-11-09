@@ -177,7 +177,7 @@ export interface CsvTable {
 export interface CsvRowDiff {
   key: string;
   status: 'MATCH' | 'DIFFERENT' | 'MISSING' | 'EXTRA' | 'DUPLICATE_KEY';
-  changes: { column: string; oldValue: string; newValue: string }[];
+  changes: { column: string; newColumn: string; oldValue: string; newValue: string }[];
 }
 
 export interface CsvComparisonResult {
@@ -228,6 +228,7 @@ export function compareCsv(
   newTable: CsvTable,
   oldKey: string,
   newKey: string,
+  columnMappings: Record<string, string> = {},
 ): CsvComparisonResult {
   if (!oldTable.columns.includes(oldKey) || !newTable.columns.includes(newKey)) {
     throw new Error('Select a matching key column that exists in both CSV files.');
@@ -241,8 +242,11 @@ export function compareCsv(
     ...[...newCounts].filter(([, count]) => count > 1).map(([key]) => key),
   ]);
 
-  const commonColumns = oldTable.columns
-    .filter((column) => column !== oldKey && newTable.columns.includes(column) && column !== newKey);
+  const mappings = Object.fromEntries(oldTable.columns
+    .filter((column) => column !== oldKey)
+    .map((column) => [column, columnMappings[column] ?? (newTable.columns.includes(column) ? column : '')])
+    .filter(([, target]) => Boolean(target) && target !== newKey)) as Record<string, string>;
+  const mappedColumns = Object.entries(mappings);
   const newByKey = new Map(newTable.rows.map((row) => [row[newKey], row]));
   const oldKeys = new Set(oldTable.rows.map((row) => row[oldKey]));
   const rowDiffs: CsvRowDiff[] = [];
@@ -255,9 +259,9 @@ export function compareCsv(
     }
     const newRow = newByKey.get(key);
     if (!newRow) { rowDiffs.push({ key, status: 'MISSING', changes: [] }); continue; }
-    const changes = commonColumns
-      .filter((column) => oldRow[column] !== newRow[column])
-      .map((column) => ({ column, oldValue: oldRow[column], newValue: newRow[column] }));
+    const changes = mappedColumns
+      .filter(([oldColumn, newColumn]) => oldRow[oldColumn] !== newRow[newColumn])
+      .map(([oldColumn, newColumn]) => ({ column: oldColumn, newColumn, oldValue: oldRow[oldColumn], newValue: newRow[newColumn] }));
     rowDiffs.push({ key, status: changes.length ? 'DIFFERENT' : 'MATCH', changes });
   }
   for (const newRow of newTable.rows) {
@@ -270,8 +274,8 @@ export function compareCsv(
   }
 
   return {
-    columnsOnlyOld: oldTable.columns.filter((column) => !newTable.columns.includes(column)),
-    columnsOnlyNew: newTable.columns.filter((column) => !oldTable.columns.includes(column)),
+    columnsOnlyOld: oldTable.columns.filter((column) => column !== oldKey && !mappings[column]),
+    columnsOnlyNew: newTable.columns.filter((column) => column !== newKey && !Object.values(mappings).includes(column)),
     rowDiffs,
     summary: {
       matched: rowDiffs.filter((diff) => diff.status === 'MATCH').length,
