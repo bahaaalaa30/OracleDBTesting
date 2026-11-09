@@ -290,7 +290,7 @@ export interface DdlColumn {
 }
 
 export function parseOracleCreateTable(ddl: string): DdlColumn[] {
-  const cleaned = ddl.replace(/--[^\\r\\n]*/g, '').replace(/\\/\\*[\\s\\S]*?\\*\\//g, '');
+  const cleaned = ddl.replace(/--[^\r\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   const open = cleaned.indexOf('(');
   const close = cleaned.lastIndexOf(')');
   if (open < 0 || close <= open) throw new Error('SQL file must contain a CREATE TABLE statement with a column list.');
@@ -315,22 +315,22 @@ export function parseOracleCreateTable(ddl: string): DdlColumn[] {
   const columns: DdlColumn[] = [];
   const primaryKeys = new Set<string>();
   for (const definition of definitions) {
-    const pkMatch = definition.match(/^\\s*(?:CONSTRAINT\\s+["\\w$#]+\\s+)?PRIMARY\\s+KEY\\s*\\(([^)]+)\\)/i);
+    const pkMatch = definition.match(/^\s*(?:CONSTRAINT\s+["\w$#]+\s+)?PRIMARY\s+KEY\s*\(([^)]+)\)/i);
     if (pkMatch) {
       pkMatch[1].split(',').forEach((name) => primaryKeys.add(name.trim().replace(/^"|"$/g, '').toUpperCase()));
       continue;
     }
-    if (/^\\s*(CONSTRAINT|PRIMARY|FOREIGN|UNIQUE|CHECK)\\b/i.test(definition)) continue;
+    if (/^\s*(CONSTRAINT|PRIMARY|FOREIGN|UNIQUE|CHECK)\b/i.test(definition)) continue;
 
-    const match = definition.match(/^\\s*("[^"]+"|[A-Za-z0-9_$#]+)\\s+([A-Za-z][A-Za-z0-9_ ]*?)(?:\\s*\\(([^)]*)\\))?(?=\\s|$)/);
+    const match = definition.match(/^\s*("[^"]+"|[A-Za-z0-9_$#]+)\s+([A-Za-z][A-Za-z0-9_ ]*?)(?:\s*\(([^)]*)\))?(?=\s|$)/);
     if (!match) continue;
     const name = match[1].replace(/^"|"$/g, '').replace(/""/g, '"');
-    const dataType = match[2].trim().replace(/\\s+/g, ' ').toUpperCase();
+    const dataType = match[2].trim().replace(/\s+/g, ' ').toUpperCase();
     const args = match[3]?.split(',').map((part) => Number(part.trim()));
     const tail = definition.slice(match[0].length);
-    const inlinePrimaryKey = /\\bPRIMARY\\s+KEY\\b/i.test(tail);
-    const notNull = /\\bNOT\\s+NULL\\b/i.test(tail) || inlinePrimaryKey;
-    const defaultMatch = tail.match(/\\bDEFAULT\\s+(.+?)(?=\\s+(?:NOT\\s+NULL|NULL|PRIMARY\\s+KEY|CONSTRAINT)\\b|$)/i);
+    const inlinePrimaryKey = /\bPRIMARY\s+KEY\b/i.test(tail);
+    const notNull = /\bNOT\s+NULL\b/i.test(tail) || inlinePrimaryKey;
+    const defaultMatch = tail.match(/\bDEFAULT\s+(.+?)(?=\s+(?:NOT\s+NULL|NULL|PRIMARY\s+KEY|CONSTRAINT)\b|$)/i);
     const key = name.toUpperCase();
     columns.push({
       name,
