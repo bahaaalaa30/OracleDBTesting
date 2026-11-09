@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest';
+import { compareFormLists } from './formListComparison';
+
+const form = (title: string, fieldName = 'FIELD_1') => ({
+  currentVersion: { schemaJson: JSON.stringify({ title, pages: [{ name: 'page1', elements: [{ type: 'text', name: fieldName }] }] }) },
+});
+
+describe('Form list comparison by schema title', () => {
+  it('matches forms by exact schema title and compares their schemas', () => {
+    const result = compareFormLists([form('Dental Care Plan')], [form('Dental Care Plan', 'FIELD_2')]);
+    expect(result.summary).toMatchObject({ matched: 1, different: 1, missingInNew: 0, newInNew: 0 });
+    expect(result.items[0].differences?.diffs.length).toBeGreaterThan(0);
+  });
+
+  it('reports forms missing from New and forms newly present in New', () => {
+    const result = compareFormLists([form('Old Form')], [form('New Form')]);
+    expect(result.summary).toMatchObject({ missingInNew: 1, newInNew: 1 });
+  });
+
+  it('does not auto-match duplicate titles', () => {
+    const result = compareFormLists([form('Duplicate'), form('Duplicate')], [form('Duplicate')]);
+    expect(result.summary.duplicateTitles).toBe(2);
+    expect(result.summary.matched).toBe(0);
+  });
+
+  it('supports legacy top-level schemaJson and isolates invalid records', () => {
+    const result = compareFormLists(
+      [{ schemaJson: JSON.stringify({ title: 'Legacy Form', pages: [] }) }, { nope: true }],
+      [form('Legacy Form')],
+    );
+    expect(result.summary.matched).toBe(1);
+    expect(result.summary.invalid).toBe(1);
+  });
+
+  it('requires a JSON array for each side', () => {
+    expect(() => compareFormLists({}, [])).toThrow('Old JSON must contain an array');
+  });
+});
