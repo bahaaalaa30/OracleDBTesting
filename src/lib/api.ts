@@ -41,13 +41,6 @@ export interface ApiErrorShape {
 
 // ---------- Connections ----------
 
-export async function getTnsAliases(resolution: 'DIRECT' | 'LDAP'): Promise<string[]> {
-  const { data } = await apiClient.get<{ aliases: string[] }>('/connections/tns-aliases', {
-    params: { resolution },
-  });
-  return data.aliases;
-}
-
 export async function testConnection(cfg: Omit<ConnectionConfig, 'id'>): Promise<ConnectionStatus> {
   const { data } = await apiClient.post<ConnectionStatus>('/connections/test', cfg);
   return data;
@@ -232,7 +225,6 @@ export async function getReport(reportId: string): Promise<ComparisonResult> {
 }
 
 export const api = {
-  getTnsAliases,
   testConnection,
   connectDatabase,
   disconnectDatabase,
