@@ -16,10 +16,13 @@ export type ViewKey =
 export interface ConnectionConfig {
   id: Side;
   name: string;
-  resolution: 'DIRECT' | 'LDAP';
-  databaseAlias: string;
+  host: string;
+  port: number;
+  serviceName: string;
+  sid: string;
   username: string;
   password: string;
+  mode: 'SERVICE_NAME' | 'SID';
 }
 
 export interface ConnectionStatus {
