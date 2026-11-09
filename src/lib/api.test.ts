@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
-import { apiClient, countRows, getReport, getTableStructure, getConnectionStatus } from './api';
+import { apiClient, countRows, getReport, getTableStructure, getConnectionStatus, getTnsAliases } from './api';
 
 const mock = new MockAdapter(apiClient);
 
 describe('API client', () => {
   beforeEach(() => mock.reset());
   afterEach(() => mock.reset());
+
+  it('loads available aliases for the selected TNS resolution mode', async () => {
+    mock.onGet('/connections/tns-aliases', { params: { resolution: 'DIRECT' } }).reply(200, { aliases: ['ONCO_PRD', 'ONCO_UAT'] });
+
+    await expect(getTnsAliases('DIRECT')).resolves.toEqual(['ONCO_PRD', 'ONCO_UAT']);
+  });
 
   it('returns the response payload for a successful request', async () => {
     const payload = { old: { connected: true }, new: { connected: false } };
