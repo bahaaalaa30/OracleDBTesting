@@ -53,14 +53,14 @@ describe('AppContext', () => {
   it('updates only the selected database connection', () => {
     const { result: hook } = renderHook(() => useApp(), { wrapper });
 
-    act(() => hook.current.updateConnection('new', { databaseAlias: 'ONCO_PRD', resolution: 'DIRECT' }));
+    act(() => hook.current.updateConnection('new', { host: 'oracle-new.local', port: 1522 }));
 
     expect(hook.current.connections.new).toMatchObject({
       id: 'new',
-      databaseAlias: 'ONCO_PRD',
-      resolution: 'DIRECT',
+      host: 'oracle-new.local',
+      port: 1522,
     });
-    expect(hook.current.connections.old.databaseAlias).toBe('');
+    expect(hook.current.connections.old.host).toBe('');
   });
 
   it('merges connection statuses without clearing the other side', () => {
