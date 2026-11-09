@@ -3,6 +3,7 @@ import { FileJson, FileSpreadsheet, Upload, Play, Download, AlertCircle, CheckCi
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { BatchFormListComparison } from '@/views/BatchFormListComparison';
 import { compareCsv, compareDdl, compareJson, parseCsv, parseJsonFileContent, type CsvComparisonResult, type JsonComparisonResult } from '@/lib/fileComparison';
 
 type CompareMode = 'json' | 'csv';
@@ -66,6 +67,7 @@ function valueText(value: unknown): string {
 
 export function FileComparisonView() {
   const [mode, setMode] = useState<CompareMode>('json');
+  const [batchMode, setBatchMode] = useState(false);
   const [oldFile, setOldFile] = useState<LoadedFile | null>(null);
   const [newFile, setNewFile] = useState<LoadedFile | null>(null);
   const [oldStructureFile, setOldStructureFile] = useState<LoadedFile | null>(null);
@@ -181,6 +183,9 @@ export function FileComparisonView() {
           </Button>
           <Button size="sm" variant={mode === 'csv' ? 'primary' : 'outline'} onClick={() => { setMode('csv'); setOldFile(null); setNewFile(null); setOldStructureFile(null); setNewStructureFile(null); clearResult(); }}>
             <FileSpreadsheet size={15} /> CSV Table Comparison
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setBatchMode(true)}>
+            <FileJson size={15} /> Form Studio List Comparison
           </Button>
         </div>
 
