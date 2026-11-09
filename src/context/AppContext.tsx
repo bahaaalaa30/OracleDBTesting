@@ -14,6 +14,7 @@ import type {
   ViewKey,
 } from '@/types';
 import { DEFAULT_PORT } from '@/lib/config';
+import { setApiDemoMode } from '@/lib/api';
 
 interface TableSelection {
   oldSchema: string;
@@ -44,6 +45,9 @@ interface AppState {
   oldMetadata: MetadataSourceConfig | null;
   newMetadata: MetadataSourceConfig | null;
   setMetadata: (side: 'old' | 'new', config: MetadataSourceConfig | null) => void;
+  demoMode: boolean;
+  enableDemoMode: () => void;
+  disableDemoMode: () => void;
   results: ComparisonResult[];
   addResults: (r: ComparisonResult[]) => void;
 }
@@ -83,6 +87,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [oldMetadata, setOldMetadata] = useState<MetadataSourceConfig | null>(null);
   const [newMetadata, setNewMetadata] = useState<MetadataSourceConfig | null>(null);
   const [results, setResults] = useState<ComparisonResult[]>([]);
+  const [demoMode, setDemoMode] = useState(false);
+
+  const enableDemoMode = useCallback(() => {
+    setApiDemoMode(true);
+    setDemoMode(true);
+    setStatusesState({
+      old: { connected: true, databaseName: 'HIS_OLD_DEMO', oracleVersion: '19c (simulated)', userName: 'DEMO_USER', connectedAt: new Date().toISOString(), durationSeconds: 0 },
+      new: { connected: true, databaseName: 'HIS_NEW_DEMO', oracleVersion: '19c (simulated)', userName: 'DEMO_USER', connectedAt: new Date().toISOString(), durationSeconds: 0 },
+    });
+    setSelectedTables([]);
+    setActiveTable(null);
+    setResults([{
+      id: 'demo-seed-patients', name: 'Demo: Initial Patient Migration Check',
+      oldDatabase: 'HIS_OLD_DEMO', newDatabase: 'HIS_NEW_DEMO',
+      objectName: 'HIS_OLD.PATIENTS -> HIS_NEW.PATIENTS', comparisonType: 'TABLE_DATA',
+      summary: { totalItems: 5, matched: 2, different: 1, missing: 1, extra: 1, warnings: 0 },
+      status: 'FAIL', warnings: ['Simulated sample result. Run a fresh comparison to explore details.'],
+      executionDate: new Date().toISOString(),
+    }]);
+  }, []);
+
+  const disableDemoMode = useCallback(() => {
+    setApiDemoMode(false);
+    setDemoMode(false);
+    setStatusesState({ old: null, new: null });
+    setSelectedTables([]);
+    setActiveTable(null);
+    setResults([]);
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme((t) => {
@@ -141,6 +174,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       oldMetadata,
       newMetadata,
       setMetadata,
+      demoMode,
+      enableDemoMode,
+      disableDemoMode,
       results,
       addResults,
     }),
@@ -159,6 +195,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       oldMetadata,
       newMetadata,
       setMetadata,
+      demoMode,
+      enableDemoMode,
+      disableDemoMode,
       results,
       addResults,
     ],
