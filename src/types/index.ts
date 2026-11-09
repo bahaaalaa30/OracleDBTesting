@@ -1,18 +1,6 @@
 export type Side = 'old' | 'new';
 
-export type ViewKey =
-  | 'file-comparison'
-  | 'dashboard'
-  | 'connections'
-  | 'explorer'
-  | 'structure'
-  | 'data'
-  | 'mapping'
-  | 'forms-discovery'
-  | 'forms-comparison'
-  | 'results'
-  | 'reports'
-  | 'settings';
+export type ViewKey = 'file-comparison' | 'results' | 'reports';
 
 export interface ConnectionConfig {
   id: Side;
