@@ -277,3 +277,98 @@ export function compareCsv(
     },
   };
 }
+
+export interface DdlColumn {
+  name: string;
+  dataType: string;
+  length?: number;
+  precision?: number;
+  scale?: number;
+  nullable: boolean;
+  defaultValue?: string;
+  primaryKey: boolean;
+}
+
+export function parseOracleCreateTable(ddl: string): DdlColumn[] {
+  const cleaned = ddl.replace(/--[^\\r\\n]*/g, '').replace(/\\/\\*[\\s\\S]*?\\*\\//g, '');
+  const open = cleaned.indexOf('(');
+  const close = cleaned.lastIndexOf(')');
+  if (open < 0 || close <= open) throw new Error('SQL file must contain a CREATE TABLE statement with a column list.');
+
+  const body = cleaned.slice(open + 1, close);
+  const definitions: string[] = [];
+  let start = 0;
+  let depth = 0;
+  let quote = false;
+  for (let i = 0; i < body.length; i += 1) {
+    const char = body[i];
+    if (char === '"') quote = !quote;
+    if (!quote && char === '(') depth += 1;
+    if (!quote && char === ')') depth -= 1;
+    if (!quote && depth === 0 && char === ',') {
+      definitions.push(body.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  definitions.push(body.slice(start).trim());
+
+  const columns: DdlColumn[] = [];
+  const primaryKeys = new Set<string>();
+  for (const definition of definitions) {
+    const pkMatch = definition.match(/^\\s*(?:CONSTRAINT\\s+["\\w$#]+\\s+)?PRIMARY\\s+KEY\\s*\\(([^)]+)\\)/i);
+    if (pkMatch) {
+      pkMatch[1].split(',').forEach((name) => primaryKeys.add(name.trim().replace(/^"|"$/g, '').toUpperCase()));
+      continue;
+    }
+    if (/^\\s*(CONSTRAINT|PRIMARY|FOREIGN|UNIQUE|CHECK)\\b/i.test(definition)) continue;
+
+    const match = definition.match(/^\\s*("[^"]+"|[A-Za-z0-9_$#]+)\\s+([A-Za-z][A-Za-z0-9_ ]*?)(?:\\s*\\(([^)]*)\\))?(?=\\s|$)/);
+    if (!match) continue;
+    const name = match[1].replace(/^"|"$/g, '').replace(/""/g, '"');
+    const dataType = match[2].trim().replace(/\\s+/g, ' ').toUpperCase();
+    const args = match[3]?.split(',').map((part) => Number(part.trim()));
+    const tail = definition.slice(match[0].length);
+    const inlinePrimaryKey = /\\bPRIMARY\\s+KEY\\b/i.test(tail);
+    const notNull = /\\bNOT\\s+NULL\\b/i.test(tail) || inlinePrimaryKey;
+    const defaultMatch = tail.match(/\\bDEFAULT\\s+(.+?)(?=\\s+(?:NOT\\s+NULL|NULL|PRIMARY\\s+KEY|CONSTRAINT)\\b|$)/i);
+    const key = name.toUpperCase();
+    columns.push({
+      name,
+      dataType,
+      ...(args?.[0] !== undefined && Number.isFinite(args[0]) ? (dataType === 'NUMBER' ? { precision: args[0] } : { length: args[0] }) : {}),
+      ...(dataType === 'NUMBER' && args?.[1] !== undefined && Number.isFinite(args[1]) ? { scale: args[1] } : {}),
+      nullable: !notNull,
+      ...(defaultMatch ? { defaultValue: defaultMatch[1].trim() } : {}),
+      primaryKey: inlinePrimaryKey || primaryKeys.has(key),
+    });
+  }
+  if (columns.length === 0) throw new Error('No supported column definitions were found in the SQL file.');
+  return columns.map((column) => ({ ...column, primaryKey: column.primaryKey || primaryKeys.has(column.name.toUpperCase()) }));
+}
+
+export function compareDdl(oldDdl: string, newDdl: string) {
+  const oldColumns = parseOracleCreateTable(oldDdl);
+  const newColumns = parseOracleCreateTable(newDdl);
+  const oldMap = new Map(oldColumns.map((column) => [column.name.toUpperCase(), column]));
+  const newMap = new Map(newColumns.map((column) => [column.name.toUpperCase(), column]));
+  const names = [...oldColumns.map((column) => column.name), ...newColumns.filter((column) => !oldMap.has(column.name.toUpperCase())).map((column) => column.name)];
+  const diffs = names.flatMap((name) => {
+    const oldColumn = oldMap.get(name.toUpperCase());
+    const newColumn = newMap.get(name.toUpperCase());
+    if (!oldColumn) return [{ column: name, status: 'ADDED' as const, oldColumn: undefined, newColumn }];
+    if (!newColumn) return [{ column: name, status: 'REMOVED' as const, oldColumn, newColumn: undefined }];
+    const properties = (['dataType', 'length', 'precision', 'scale', 'nullable', 'defaultValue', 'primaryKey'] as const)
+      .filter((property) => oldColumn[property] !== newColumn[property])
+      .map((property) => ({ property, oldValue: oldColumn[property], newValue: newColumn[property] }));
+    return properties.length ? [{ column: name, status: 'CHANGED' as const, oldColumn, newColumn, properties }] : [];
+  });
+  return {
+    diffs,
+    summary: {
+      added: diffs.filter((diff) => diff.status === 'ADDED').length,
+      removed: diffs.filter((diff) => diff.status === 'REMOVED').length,
+      changed: diffs.filter((diff) => diff.status === 'CHANGED').length,
+      matched: oldColumns.length + newColumns.length - diffs.length,
+    },
+  };
+}
