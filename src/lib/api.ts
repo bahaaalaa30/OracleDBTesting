@@ -227,6 +227,15 @@ export async function exportReport(req: {
   format: 'XLSX' | 'CSV' | 'PDF';
   maskPatientData: boolean;
 }): Promise<Blob> {
+  if (demoModeEnabled) {
+    if (req.format !== 'CSV') throw new Error('Demo Mode supports CSV export. Use CSV while running with sample data.');
+    const header = 'Name,Type,Object,Matched,Different,Missing,Extra,Status,Execution Date';
+    const rows = req.resultIds.map(() => [
+      'Demo: Initial Patient Migration Check', 'TABLE_DATA', 'HIS_OLD.PATIENTS -> HIS_NEW.PATIENTS',
+      2, 1, 1, 1, 'FAIL', new Date().toISOString(),
+    ].map(value => '"' + String(value).replace(/"/g, '""') + '"').join(','));
+    return new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  }
   const { data } = await apiClient.post('/reports/export', req, { responseType: 'blob' });
   return data;
 }
