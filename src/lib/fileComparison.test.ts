@@ -9,7 +9,7 @@ describe('JSON file comparison', () => {
         { type: 'dropdown', name: 'C_PINSTRUCTION13', title: '   ', isRequired: false,
           adeaMeta: { legacyName: 'C_PINSTRUCTION13', promptId: 'PINSTRUCTION_P4', compId: 'C_PINSTRUCTION', discrId: 'PINSTRUCTION', secseq: '13', sourceTag: 'LIST-BOX', sectionTitle: '' },
           choices: [] },
-        { type: 'text', name: 'C_SHORT16', title: '\\u00A0', isRequired: false },
+        { type: 'text', name: 'C_SHORT16', title: '\u00A0', isRequired: false },
       ] }] }],
     };
     const newForm = {
