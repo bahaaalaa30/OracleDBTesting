@@ -13,6 +13,7 @@ import type {
   MetadataSourceConfig,
   ViewKey,
 } from '@/types';
+import { DEFAULT_PORT } from '@/lib/config';
 
 interface TableSelection {
   oldSchema: string;
@@ -52,10 +53,13 @@ const Ctx = createContext<AppState | null>(null);
 const emptyConfig = (name: string): ConnectionConfig => ({
   id: 'old',
   name,
-  resolution: 'DIRECT',
-  databaseAlias: '',
+  host: '',
+  port: DEFAULT_PORT,
+  serviceName: '',
+  sid: '',
   username: '',
   password: '',
+  mode: 'SERVICE_NAME',
 });
 
 export function AppProvider({ children }: { children: ReactNode }) {
