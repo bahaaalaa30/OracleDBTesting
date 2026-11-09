@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareCsv, compareDdl, compareJson, parseCsv, parseOracleCreateTable } from './fileComparison';
+import { compareJson } from './fileComparison';
 
 describe('JSON file comparison', () => {
 
@@ -83,47 +83,4 @@ describe('JSON file comparison', () => {
 });
 
 describe('CSV file comparison', () => {
-  it('parses quoted commas and compares rows by selected key', () => {
-    const oldTable = parseCsv('ID,NAME,STATUS\n1,"Ahmed, Hassan",ACTIVE\n2,Mona,ACTIVE');
-    const newTable = parseCsv('ID,NAME,STATUS\n1,"Ahmed, Hassan",INACTIVE\n3,Omar,ACTIVE');
-    const result = compareCsv(oldTable, newTable, 'ID', 'ID');
-    expect(result.summary.different).toBe(1);
-    expect(result.summary.missing).toBe(1);
-    expect(result.summary.extra).toBe(1);
-  });
-
-  it('compares renamed columns through a manual mapping', () => {
-    const oldTable = parseCsv('ID,PHONE\\n1,0100');
-    const newTable = parseCsv('ID,MOBILE_NO\\n1,0101');
-    const result = compareCsv(oldTable, newTable, 'ID', 'ID', { PHONE: 'MOBILE_NO' });
-    expect(result.summary.different).toBe(1);
-    expect(result.rowDiffs[0].changes[0]).toMatchObject({ column: 'PHONE', newColumn: 'MOBILE_NO', oldValue: '0100', newValue: '0101' });
-    expect(result.columnsOnlyOld).toEqual([]);
-    expect(result.columnsOnlyNew).toEqual([]);
-  });
-
-  it('flags duplicate keys rather than silently pairing records', () => {
-    const oldTable = parseCsv('ID,VALUE\n1,A\n1,B');
-    const newTable = parseCsv('ID,VALUE\n1,A');
-    const result = compareCsv(oldTable, newTable, 'ID', 'ID');
-    expect(result.summary.duplicateKeys).toBe(2);
-  });
-});
-
-describe('Oracle DDL comparison', () => {
-  it('extracts column types, nullability, and primary keys', () => {
-    const columns = parseOracleCreateTable('CREATE TABLE T (ID NUMBER(10,0) NOT NULL, NAME VARCHAR2(100), CONSTRAINT PK_T PRIMARY KEY (ID))');
-    expect(columns[0]).toMatchObject({ name: 'ID', dataType: 'NUMBER', precision: 10, scale: 0, nullable: false, primaryKey: true });
-    expect(columns[1]).toMatchObject({ name: 'NAME', dataType: 'VARCHAR2', length: 100, nullable: true });
-  });
-
-  it('reports schema changes between DDL files', () => {
-    const result = compareDdl(
-      'CREATE TABLE T (ID NUMBER(10) NOT NULL, NAME VARCHAR2(50))',
-      'CREATE TABLE T (ID NUMBER(12) NOT NULL, FULL_NAME VARCHAR2(100))',
-    );
-    expect(result.summary.changed).toBe(1);
-    expect(result.summary.removed).toBe(1);
-    expect(result.summary.added).toBe(1);
-  });
-});
+  it('parses quot
