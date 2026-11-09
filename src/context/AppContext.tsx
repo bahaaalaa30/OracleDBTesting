@@ -67,7 +67,7 @@ const emptyConfig = (name: string): ConnectionConfig => ({
 });
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [view, setView] = useState<ViewKey>('dashboard');
+  const [view, setView] = useState<ViewKey>('file-comparison');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [settings, setSettings] = useState({
     maskPatientData: true,
