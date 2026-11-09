@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FileJson, FileSpreadsheet, Upload, Play, Download, AlertCircle, CheckCircle2, SlidersHorizontal } from 'lucide-react';
+import { FileJson, FileSpreadsheet, Upload, Play, Download, AlertCircle, CheckCircle2, ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
