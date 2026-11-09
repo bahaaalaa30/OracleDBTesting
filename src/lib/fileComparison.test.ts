@@ -57,7 +57,7 @@ describe('JSON file comparison', () => {
     };
 
     const result = compareJson(oldForm, newForm, { mode: 'form-studio' });
-    expect(result.diffs.some((diff) => diff.kind === 'CHANGED' && diff.path.includes('isRequired'))).toBe(true);
+    expect(result.diffs.some((diff) => diff.path.includes('isRequired') && diff.newValue === true)).toBe(true);
     expect(result.diffs.some((diff) => diff.path.includes('adeaMeta'))).toBe(false);
     expect(result.diffs.some((diff) => diff.kind === 'ADDED' && diff.path.includes('C_NEW'))).toBe(true);
     expect(result.diffs.some((diff) => diff.kind === 'MOVED')).toBe(false);
