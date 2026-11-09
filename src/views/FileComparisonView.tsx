@@ -177,10 +177,10 @@ export function FileComparisonView() {
     <div className="space-y-5">
       <Card title="File Comparison" description="Compare exported table data or JSON configuration files directly in your browser. No database connection or Oracle Client required.">
         <div className="mb-5 flex flex-wrap gap-2">
-          <Button size="sm" variant={mode === 'json' ? 'primary' : 'outline'} onClick={() => { setMode('json'); clearResult(); }}>
+          <Button size="sm" variant={mode === 'json' ? 'primary' : 'outline'} onClick={() => { setMode('json'); setOldFile(null); setNewFile(null); setOldStructureFile(null); setNewStructureFile(null); clearResult(); }}>
             <FileJson size={15} /> JSON Comparison
           </Button>
-          <Button size="sm" variant={mode === 'csv' ? 'primary' : 'outline'} onClick={() => { setMode('csv'); clearResult(); }}>
+          <Button size="sm" variant={mode === 'csv' ? 'primary' : 'outline'} onClick={() => { setMode('csv'); setOldFile(null); setNewFile(null); setOldStructureFile(null); setNewStructureFile(null); clearResult(); }}>
             <FileSpreadsheet size={15} /> CSV Table Comparison
           </Button>
         </div>
