@@ -176,6 +176,9 @@ export function FileComparisonView() {
   const jsonDiffs = jsonResult?.diffs ?? [];
   const csvRows = csvResult?.rowDiffs ?? [];
 
+  if (batchMode) return <BatchFormListComparison onBack={() => setBatchMode(false)} />;
+  if (analysisMode) return <FormListAnalysis onBack={() => setAnalysisMode(false)} />;
+
   return (
     <div className="space-y-5">
       <Card title="File Comparison" description="Compare exported table data or JSON configuration files directly in your browser. No database connection or Oracle Client required.">
