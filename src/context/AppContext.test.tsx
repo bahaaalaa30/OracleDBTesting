@@ -25,7 +25,7 @@ describe('AppContext', () => {
   it('provides safe defaults for settings, connections and results', () => {
     const { result: hook } = renderHook(() => useApp(), { wrapper });
 
-    expect(hook.current.view).toBe('dashboard');
+    expect(hook.current.view).toBe('file-comparison');
     expect(hook.current.theme).toBe('light');
     expect(hook.current.settings).toEqual({
       maskPatientData: true,
