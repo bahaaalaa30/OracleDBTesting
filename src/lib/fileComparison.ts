@@ -59,6 +59,11 @@ export function compareJson(
   newValue: unknown,
   options: JsonComparisonOptions = {},
 ): JsonComparisonResult {
+  if (options.mode === 'form-studio') {
+    if (!isRecord(oldValue) || !isRecord(newValue) || !Array.isArray(oldValue.pages) || !Array.isArray(newValue.pages)) {
+      throw new Error('Form Studio profile expects a JSON object with a pages array in both files.');
+    }
+  }
   const diffs: JsonDiff[] = [];
   const ignored = options.ignorePaths ?? [];
   let unchanged = 0;
