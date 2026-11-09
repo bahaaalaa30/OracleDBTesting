@@ -1,6 +1,7 @@
 export type Side = 'old' | 'new';
 
 export type ViewKey =
+  | 'file-comparison'
   | 'dashboard'
   | 'connections'
   | 'explorer'
