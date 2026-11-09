@@ -53,6 +53,16 @@ describe('CSV file comparison', () => {
     expect(result.summary.extra).toBe(1);
   });
 
+  it('compares renamed columns through a manual mapping', () => {
+    const oldTable = parseCsv('ID,PHONE\\n1,0100');
+    const newTable = parseCsv('ID,MOBILE_NO\\n1,0101');
+    const result = compareCsv(oldTable, newTable, 'ID', 'ID', { PHONE: 'MOBILE_NO' });
+    expect(result.summary.different).toBe(1);
+    expect(result.rowDiffs[0].changes[0]).toMatchObject({ column: 'PHONE', newColumn: 'MOBILE_NO', oldValue: '0100', newValue: '0101' });
+    expect(result.columnsOnlyOld).toEqual([]);
+    expect(result.columnsOnlyNew).toEqual([]);
+  });
+
   it('flags duplicate keys rather than silently pairing records', () => {
     const oldTable = parseCsv('ID,VALUE\n1,A\n1,B');
     const newTable = parseCsv('ID,VALUE\n1,A');
