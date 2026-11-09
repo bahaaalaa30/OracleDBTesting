@@ -33,7 +33,7 @@ function normalizeFormStudioNode(value: unknown, key?: string): unknown {
   if (key === 'adeaMeta') return undefined;
   if (key === 'isRequired' && value === false) return undefined;
   if (key === 'choices' && Array.isArray(value) && value.length === 0) return undefined;
-  if (key === 'title' && typeof value === 'string' && value.replace(/[\\s\\u00A0\\uFEFF]/g, '') === '') return '';
+  if (key === 'title' && typeof value === 'string' && value.replace(/[\s\u00A0\uFEFF]/g, '') === '') return '';
 
   if (Array.isArray(value)) {
     return value.map((item) => normalizeFormStudioNode(item));
