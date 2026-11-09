@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plug, RefreshCw, Zap, Link2, Link2Off, Copy } from 'lucide-react';
+import { useState } from 'react';
+import { Plug, RefreshCw, Trash2, Zap, Link2, Link2Off } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import { Input, Select, PasswordInput } from '@/components/ui/Form';
 import { ErrorBanner, Spinner } from '@/components/ui/Feedback';
 import { ConnectionDot } from '@/components/ui/Status';
 import { api } from '@/lib/api';
+import { DEFAULT_PORT } from '@/lib/config';
 import { formatDuration } from '@/lib/utils';
 import type { ConnectionConfig, Side } from '@/types';
 
@@ -34,30 +35,6 @@ function ConnectionPanel({ side }: { side: Side }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
-  const [aliases, setAliases] = useState<string[]>([]);
-  const [loadingAliases, setLoadingAliases] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    setLoadingAliases(true);
-    api.getTnsAliases(cfg.resolution)
-      .then((items) => { if (active) setAliases(items); })
-      .catch((e) => { if (active) { setAliases([]); setError(e instanceof Error ? e.message : 'Could not load Oracle TNS aliases'); } })
-      .finally(() => { if (active) setLoadingAliases(false); });
-    return () => { active = false; };
-  }, [cfg.resolution]);
-
-  const copyOldSettings = () => {
-    const source = connections.old;
-    updateConnection('new', {
-      resolution: source.resolution,
-      databaseAlias: source.databaseAlias,
-      username: source.username,
-      password: source.password,
-    });
-    setTestResult(null);
-    setError(null);
-  };
 
   const update = (patch: Partial<ConnectionConfig>) => {
     updateConnection(side, patch);
@@ -111,7 +88,7 @@ function ConnectionPanel({ side }: { side: Side }) {
     await handleConnect();
   };
 
-  const valid = cfg.databaseAlias && cfg.username && cfg.password;
+  const valid = cfg.host && cfg.username && (cfg.serviceName || cfg.sid);
 
   return (
     <div className="rounded-xl border border-slate-200 p-5 dark:border-slate-700">
@@ -126,20 +103,6 @@ function ConnectionPanel({ side }: { side: Side }) {
 
       {error && <div className="mb-4"><ErrorBanner message={error} onDismiss={() => setError(null)} /></div>}
 
-      {side === 'new' && (
-        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3 dark:border-blue-900/50 dark:bg-blue-900/10">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">Reuse Old Connection Settings</p>
-              <p className="text-xs text-blue-700/80 dark:text-blue-300/80">Copy host, port, service/SID and credentials. You can keep or edit them independently.</p>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={copyOldSettings}>
-              <Copy size={13} /> Copy from Old
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="space-y-3">
         <Input
           label="Connection Name"
@@ -147,25 +110,49 @@ function ConnectionPanel({ side }: { side: Side }) {
           onChange={(e) => update({ name: e.target.value })}
           placeholder={side === 'old' ? 'Old Database' : 'New Database'}
         />
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">TNS</label>
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
-            <button type="button" onClick={() => update({ resolution: 'DIRECT', databaseAlias: '' })} className={`rounded-md px-3 py-2 text-sm font-medium transition ${cfg.resolution === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-slate-500'}`}>Direct</button>
-            <button type="button" onClick={() => update({ resolution: 'LDAP', databaseAlias: '' })} className={`rounded-md px-3 py-2 text-sm font-medium transition ${cfg.resolution === 'LDAP' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-slate-500'}`}>LDAP</button>
-          </div>
-          <p className="text-xs text-slate-400">{cfg.resolution === 'DIRECT' ? 'Uses aliases configured in the local tnsnames.ora file.' : 'Resolves database aliases through the configured Oracle LDAP naming service.'}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <Input
+            label="Host"
+            value={cfg.host}
+            onChange={(e) => update({ host: e.target.value })}
+            placeholder="db.host.com"
+            required
+            className="col-span-2"
+          />
+          <Input
+            label="Port"
+            type="number"
+            value={cfg.port || ''}
+            onChange={(e) => update({ port: Number(e.target.value) || DEFAULT_PORT })}
+            required
+          />
         </div>
         <Select
-          label="Database"
-          value={cfg.databaseAlias}
-          onChange={(e) => update({ databaseAlias: e.target.value })}
+          label="Connection Mode"
+          value={cfg.mode}
+          onChange={(e) => update({ mode: e.target.value as 'SERVICE_NAME' | 'SID' })}
           options={[
-            { label: loadingAliases ? 'Loading databases…' : 'Select database', value: '' },
-            ...aliases.map((alias) => ({ label: alias, value: alias })),
+            { label: 'Service Name', value: 'SERVICE_NAME' },
+            { label: 'SID', value: 'SID' },
           ]}
-          disabled={loadingAliases || aliases.length === 0}
-          required
         />
+        {cfg.mode === 'SERVICE_NAME' ? (
+          <Input
+            label="Service Name"
+            value={cfg.serviceName}
+            onChange={(e) => update({ serviceName: e.target.value })}
+            placeholder="ORCLPDB1"
+            required
+          />
+        ) : (
+          <Input
+            label="SID"
+            value={cfg.sid}
+            onChange={(e) => update({ sid: e.target.value })}
+            placeholder="ORCL"
+            required
+          />
+        )}
         <Input
           label="Username"
           value={cfg.username}
@@ -213,7 +200,7 @@ function ConnectionPanel({ side }: { side: Side }) {
       </div>
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
-        <Plug size={12} /> Oracle TNS alias connection. No manual DNS, IP, port, or service name is required here. Read-only access.
+        <Plug size={12} /> Read-only access. No INSERT, UPDATE, or DELETE operations are performed.
       </p>
     </div>
   );
