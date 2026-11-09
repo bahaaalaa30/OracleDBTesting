@@ -76,6 +76,7 @@ export function FileComparisonView() {
   const [ignoreSectionTitle, setIgnoreSectionTitle] = useState(false);
   const [oldKey, setOldKey] = useState('');
   const [newKey, setNewKey] = useState('');
+  const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
   const [jsonResult, setJsonResult] = useState<JsonComparisonResult | null>(null);
   const [csvResult, setCsvResult] = useState<CsvComparisonResult | null>(null);
   const [error, setError] = useState('');
@@ -144,7 +145,7 @@ export function FileComparisonView() {
     setError('');
     try {
       if (!oldFile || !newFile) throw new Error('Upload both Old and New CSV files first.');
-      const result = compareCsv(parseCsv(oldFile.content), parseCsv(newFile.content), oldKey, newKey);
+      const result = compareCsv(parseCsv(oldFile.content), parseCsv(newFile.content), oldKey, newKey, columnMappings);
       if (!!oldStructureFile !== !!newStructureFile) throw new Error('Upload both SQL Structure files, or leave both empty.');
       setDdlResult(oldStructureFile && newStructureFile ? compareDdl(oldStructureFile.content, newStructureFile.content) : null);
       setCsvResult(result);
@@ -161,10 +162,10 @@ export function FileComparisonView() {
   const exportCsv = () => {
     if (!csvResult) return;
     const rows = [
-      ['Key', 'Status', 'Column', 'Old Value', 'New Value'],
+      ['Key', 'Status', 'Old Column', 'New Column', 'Old Value', 'New Value'],
       ...csvResult.rowDiffs.flatMap((row) => row.changes.length
-        ? row.changes.map((change) => [row.key, row.status, change.column, change.oldValue, change.newValue])
-        : [[row.key, row.status, '', '', '']]),
+        ? row.changes.map((change) => [row.key, row.status, change.column, change.newColumn, change.oldValue, change.newValue])
+        : [[row.key, row.status, '', '', '', '']]),
     ];
     const csv = rows.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
     downloadText('csv-comparison-report.csv', csv, 'text/csv;charset=utf-8');
@@ -177,7 +178,7 @@ export function FileComparisonView() {
     <div className="space-y-5">
       <Card title="File Comparison" description="Compare exported table data or JSON configuration files directly in your browser. No database connection or Oracle Client required.">
         <div className="mb-5 flex flex-wrap gap-2">
-          <Button size="sm" variant={mode === 'json' ? 'primary' : 'outline'} onClick={() => { setMode('json'); setOldFile(null); setNewFile(null); setOldStructureFile(null); setNewStructureFile(null); clearResult(); }}>
+          <Button size="sm" variant={mode === 'json' ? 'primary' : 'outline'} onClick={() => { setMode('json'); setOldFile(null); setNewFile(null); setOldStructureFile(null); setNewStructureFile(null); setColumnMappings({}); clearResult(); }}>
             <FileJson size={15} /> JSON Comparison
           </Button>
           <Button size="sm" variant={mode === 'csv' ? 'primary' : 'outline'} onClick={() => { setMode('csv'); setOldFile(null); setNewFile(null); setOldStructureFile(null); setNewStructureFile(null); clearResult(); }}>
@@ -240,7 +241,30 @@ export function FileComparisonView() {
                 </select>
               </label>
             </div>
-            <p className="mt-3 text-xs text-slate-500">Only columns with the same name are compared automatically. Duplicate key values are flagged instead of silently matched.</p>
+            {csvTables && (
+              <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">
+                <div className="mb-2 text-sm font-semibold">Column mapping</div>
+                <p className="mb-3 text-xs text-slate-500">Same-name columns are mapped automatically. Change the New column when a field was renamed between exports.</p>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {csvTables.oldTable.columns.filter((column) => column !== oldKey).map((oldColumn) => (
+                    <label key={oldColumn} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <span className="min-w-0 flex-1 truncate font-mono">{oldColumn}</span>
+                      <ArrowRight size={13} className="shrink-0 text-slate-400" />
+                      <select
+                        aria-label={`Map ${oldColumn} to New column`}
+                        value={columnMappings[oldColumn] ?? (csvTables.newTable.columns.includes(oldColumn) ? oldColumn : '')}
+                        onChange={(event) => setColumnMappings((current) => ({ ...current, [oldColumn]: event.target.value }))}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 font-mono text-xs dark:border-slate-600 dark:bg-slate-900"
+                      >
+                        <option value="">Not mapped</option>
+                        {csvTables.newTable.columns.filter((column) => column !== newKey).map((column) => <option key={column} value={column}>{column}</option>)}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-slate-500">Duplicate key values are flagged instead of silently matched.</p>
           </div>
         )}
 
@@ -304,7 +328,7 @@ export function FileComparisonView() {
           {(csvResult.columnsOnlyOld.length > 0 || csvResult.columnsOnlyNew.length > 0) && <div className="mb-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Columns only in Old: {csvResult.columnsOnlyOld.join(', ') || 'None'}<br />Columns only in New: {csvResult.columnsOnlyNew.join(', ') || 'None'}</div>}
           <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
             <table className="w-full text-left text-xs"><thead className="bg-slate-50 text-slate-500 dark:bg-slate-800"><tr><th className="p-3">Key</th><th className="p-3">Status</th><th className="p-3">Differences</th></tr></thead><tbody>
-              {csvRows.map((row, index) => <tr key={`${row.key}-${index}`} className="border-t border-slate-100 dark:border-slate-700"><td className="p-3 font-mono">{row.key}</td><td className="p-3"><Badge tone={row.status === 'MATCH' ? 'success' : row.status === 'DIFFERENT' ? 'warning' : 'error'}>{row.status}</Badge></td><td className="p-3">{row.changes.map((change) => `${change.column}: ${change.oldValue} → ${change.newValue}`).join(' | ') || '—'}</td></tr>)}
+              {csvRows.map((row, index) => <tr key={`${row.key}-${index}`} className="border-t border-slate-100 dark:border-slate-700"><td className="p-3 font-mono">{row.key}</td><td className="p-3"><Badge tone={row.status === 'MATCH' ? 'success' : row.status === 'DIFFERENT' ? 'warning' : 'error'}>{row.status}</Badge></td><td className="p-3">{row.changes.map((change) => `${change.column} → ${change.newColumn}: ${change.oldValue} → ${change.newValue}`).join(' | ') || '—'}</td></tr>)}
             </tbody></table>
           </div>
         </Card>
