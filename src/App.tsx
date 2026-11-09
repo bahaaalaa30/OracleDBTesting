@@ -1,6 +1,7 @@
 import { AppProvider, useApp } from '@/context/AppContext';
 import { Sidebar, Header } from '@/components/layout/Sidebar';
 import { DashboardView } from '@/views/DashboardView';
+import { FileComparisonView } from '@/views/FileComparisonView';
 import { ConnectionsView } from '@/views/ConnectionsView';
 import { ExplorerView } from '@/views/ExplorerView';
 import { StructureComparisonView, StructureComparisonDetail } from '@/views/StructureComparisonView';
@@ -18,6 +19,8 @@ function MainContent() {
   switch (view) {
     case 'dashboard':
       return <DashboardView />;
+    case 'file-comparison':
+      return <FileComparisonView />;
     case 'connections':
       return <ConnectionsView />;
     case 'explorer':
