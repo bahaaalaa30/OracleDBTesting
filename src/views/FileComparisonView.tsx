@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { FileJson, FileSpreadsheet, Upload, Play, Download, AlertCircle, CheckCircle2, XCircle, ArrowRight, SlidersHorizontal } from 'lucide-react';
+import { FileJson, FileSpreadsheet, Upload, Play, Download, AlertCircle, CheckCircle2, SlidersHorizontal } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { compareCsv, compareJson, parseCsv, parseJsonFileContent, type CsvComparisonResult, type CsvTable, type JsonComparisonResult } from '@/lib/fileComparison';
+import { compareCsv, compareDdl, compareJson, parseCsv, parseJsonFileContent, type CsvComparisonResult, type JsonComparisonResult } from '@/lib/fileComparison';
 
 type CompareMode = 'json' | 'csv';
 type FormMode = 'generic' | 'form-studio';
@@ -14,7 +14,7 @@ interface LoadedFile {
 }
 
 function FileDrop({ side, file, accept, onFile }: {
-  side: 'Old' | 'New';
+  side: string;
   file: LoadedFile | null;
   accept: string;
   onFile: (file: File) => void;
@@ -68,6 +68,9 @@ export function FileComparisonView() {
   const [mode, setMode] = useState<CompareMode>('json');
   const [oldFile, setOldFile] = useState<LoadedFile | null>(null);
   const [newFile, setNewFile] = useState<LoadedFile | null>(null);
+  const [oldStructureFile, setOldStructureFile] = useState<LoadedFile | null>(null);
+  const [newStructureFile, setNewStructureFile] = useState<LoadedFile | null>(null);
+  const [ddlResult, setDdlResult] = useState<ReturnType<typeof compareDdl> | null>(null);
   const [formMode, setFormMode] = useState<FormMode>('form-studio');
   const [compareOrder, setCompareOrder] = useState(false);
   const [ignoreSectionTitle, setIgnoreSectionTitle] = useState(false);
@@ -78,18 +81,6 @@ export function FileComparisonView() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const parsedJson = useMemo(() => {
-    if (mode !== 'json' || !oldFile || !newFile) return null;
-    try {
-      return {
-        oldValue: parseJsonFileContent(oldFile.content),
-        newValue: parseJsonFileContent(newFile.content),
-      };
-    } catch {
-      return null;
-    }
-  }, [mode, oldFile, newFile]);
-
   const csvTables = useMemo(() => {
     if (mode !== 'csv' || !oldFile || !newFile) return null;
     try {
@@ -99,7 +90,7 @@ export function FileComparisonView() {
     }
   }, [mode, oldFile, newFile]);
 
-  const clearResult = () => { setJsonResult(null); setCsvResult(null); setError(''); };
+  const clearResult = () => { setJsonResult(null); setCsvResult(null); setDdlResult(null); setError(''); };
 
   const loadSide = async (side: 'old' | 'new', file: File) => {
     clearResult();
@@ -138,11 +129,24 @@ export function FileComparisonView() {
     }
   };
 
+  const loadStructure = async (side: 'old' | 'new', file: File) => {
+    clearResult();
+    try {
+      const loaded = await readFile(file);
+      if (side === 'old') setOldStructureFile(loaded);
+      else setNewStructureFile(loaded);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not read SQL structure file');
+    }
+  };
+
   const runCsv = () => {
     setError('');
     try {
       if (!oldFile || !newFile) throw new Error('Upload both Old and New CSV files first.');
       const result = compareCsv(parseCsv(oldFile.content), parseCsv(newFile.content), oldKey, newKey);
+      if (!!oldStructureFile !== !!newStructureFile) throw new Error('Upload both SQL Structure files, or leave both empty.');
+      setDdlResult(oldStructureFile && newStructureFile ? compareDdl(oldStructureFile.content, newStructureFile.content) : null);
       setCsvResult(result);
       setJsonResult(null);
     } catch (e) {
@@ -185,6 +189,17 @@ export function FileComparisonView() {
           <FileDrop side="Old" file={oldFile} accept={mode === 'json' ? '.json,application/json' : '.csv,text/csv'} onFile={(file) => void loadSide('old', file)} />
           <FileDrop side="New" file={newFile} accept={mode === 'json' ? '.json,application/json' : '.csv,text/csv'} onFile={(file) => void loadSide('new', file)} />
         </div>
+
+        {mode === 'csv' && (
+          <div className="mt-4">
+            <div className="mb-2 text-sm font-semibold">Optional SQL Structure files</div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <FileDrop side="Old Structure" file={oldStructureFile} accept=".sql,text/plain" onFile={(file) => void loadStructure('old', file)} />
+              <FileDrop side="New Structure" file={newStructureFile} accept=".sql,text/plain" onFile={(file) => void loadStructure('new', file)} />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">CSV-only mode compares data. Upload both CREATE TABLE SQL files to include column definition checks.</p>
+          </div>
+        )}
 
         {mode === 'json' ? (
           <div className="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
@@ -262,6 +277,18 @@ export function FileComparisonView() {
               </table>
             </div>
           )}
+        </Card>
+      )}
+
+      {ddlResult && (
+        <Card title="Optional Schema Validation" description="DDL comparison is based on the uploaded CREATE TABLE definitions.">
+          <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Metric label="Added columns" value={ddlResult.summary.added} tone="success" />
+            <Metric label="Removed columns" value={ddlResult.summary.removed} tone="danger" />
+            <Metric label="Changed columns" value={ddlResult.summary.changed} tone="warning" />
+            <Metric label="Matched columns" value={ddlResult.summary.matched} tone="neutral" />
+          </div>
+          {ddlResult.diffs.length === 0 ? <EmptySuccess /> : <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full text-left text-xs"><thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="p-3">Column</th><th className="p-3">Status</th><th className="p-3">Property differences</th></tr></thead><tbody>{ddlResult.diffs.map((diff) => <tr key={diff.column} className="border-t border-slate-100 dark:border-slate-700"><td className="p-3 font-mono">{diff.column}</td><td className="p-3"><Badge tone={diff.status === 'ADDED' ? 'success' : diff.status === 'REMOVED' ? 'error' : 'warning'}>{diff.status}</Badge></td><td className="p-3">{'properties' in diff ? diff.properties.map((property) => `${property.property}: ${String(property.oldValue)} → ${String(property.newValue)}`).join(' | ') : '—'}</td></tr>)}</tbody></table></div>}
         </Card>
       )}
 
