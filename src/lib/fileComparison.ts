@@ -24,6 +24,32 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const identityKeys = ['name', 'id', 'key', 'code', 'fieldId', 'elementId'];
 
+/**
+ * Form Studio exports may contain transport/editor metadata and serialization
+ * noise that does not change the configured clinical form. Normalize only the
+ * Form Studio profile; generic JSON comparisons remain byte-value sensitive.
+ */
+function normalizeFormStudioNode(value: unknown, key?: string): unknown {
+  if (key === 'adeaMeta') return undefined;
+  if (key === 'isRequired' && value === false) return undefined;
+  if (key === 'choices' && Array.isArray(value) && value.length === 0) return undefined;
+  if (key === 'title' && typeof value === 'string' && value.replace(/[\\s\\u00A0\\uFEFF]/g, '') === '') return '';
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeFormStudioNode(item));
+  }
+  if (isRecord(value)) {
+    const normalized: Record<string, unknown> = {};
+    for (const [childKey, childValue] of Object.entries(value)) {
+      const child = normalizeFormStudioNode(childValue, childKey);
+      if (child !== undefined) normalized[childKey] = child;
+    }
+    return normalized;
+  }
+  return value;
+}
+
+
 function identityOf(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   for (const key of identityKeys) {
@@ -147,7 +173,9 @@ export function compareJson(
     });
   };
 
-  walk(oldValue, newValue, '');
+  const comparisonOld = options.mode === 'form-studio' ? normalizeFormStudioNode(oldValue) : oldValue;
+  const comparisonNew = options.mode === 'form-studio' ? normalizeFormStudioNode(newValue) : newValue;
+  walk(comparisonOld, comparisonNew, '');
   return {
     diffs,
     summary: {
