@@ -87,7 +87,11 @@ export const demoCompareData = (req:DataComparisonRequest):DataComparisonResult 
     const key=String(oldRow[oldKey]), newRow=newByKey.get(key);
     if(!newRow) return {keyValues:{[oldKey]:oldRow[oldKey]},status:'MISSING' as const,changes:[]};
     const changes:{column:string;oldValue:unknown;newValue:unknown}[]=[];
-    Object.keys(oldRow).filter(k=>k in newRow).forEach(k=>{if(oldRow[k]!==newRow[k]) changes.push({column:k,oldValue:oldRow[k],newValue:newRow[k]});});
+    Object.keys(oldRow).forEach(k=>{
+      const aliases: Record<string,string> = { PHONE: 'MOBILE_NO', AMOUNT: 'CLAIM_AMOUNT', CLAIM_STATUS: 'STATUS' };
+      const newColumn = k in newRow ? k : aliases[k];
+      if (newColumn && oldRow[k] !== newRow[newColumn]) changes.push({column: k,oldValue: oldRow[k],newValue: newRow[newColumn]});
+    });
     return {keyValues:{[oldKey]:oldRow[oldKey]},status:changes.length?'DIFFERENT' as const:'MATCH' as const,changes};
   });
   newRows.filter(r=>!oldKeys.has(String(r[newKey]))).forEach(r=>rowDiffs.push({keyValues:{[newKey]:r[newKey]},status:'EXTRA',changes:[]}));
