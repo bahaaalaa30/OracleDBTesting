@@ -43,14 +43,14 @@ export function Sidebar() {
 
 export function Header() {
   const { theme, toggleTheme, view } = useApp();
-  const titles: Record<ViewKey, string> = {
+  const titles: Partial<Record<ViewKey, string>> = {
     'file-comparison': 'File Comparison',
     results: 'Comparison History',
     reports: 'Reports & Export',
   };
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-700 dark:bg-slate-800">
-      <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{titles[view]}</h2>
+      <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{titles[view] ?? 'File Comparison'}</h2>
       <div className="flex items-center gap-3">
         <span className="text-xs text-slate-400">Local file processing</span>
         <button onClick={toggleTheme} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="Toggle theme">
