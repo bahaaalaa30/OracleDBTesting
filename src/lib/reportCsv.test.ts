@@ -31,7 +31,7 @@ describe('CSV report exports', () => {
 
     expect(csv).toContain('"Form Title","Record Status","Scenario ID","Scenario","Category","Priority","Steps","Expected Result","Actual Results","Test Status","Comments","Issue"');
     expect(csv).toContain('"Emergency Form","VALID","REQ-1","Required validation","Validation","HIGH"');
-    expect(csv).toContain('"Pending","","",""');
+    expect(csv).toContain('"","Pending","",""');
     expect(csv).toContain('"Broken Form","INVALID"');
     expect(csv).toContain('"Missing schema pages."');
   });
