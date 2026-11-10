@@ -33,7 +33,7 @@ export function serializeCsvRows(rows: readonly (readonly unknown[])[]): string 
 export function buildQaScenariosCsv(forms: readonly QaScenarioCsvForm[]): string {
   const rows: unknown[][] = [[
     'Form Title', 'Record Status', 'Scenario ID', 'Scenario', 'Category',
-    'Priority', 'Steps', 'Expected Result', 'Test Status', 'Actual Results', 'Comments', 'Issue',
+    'Priority', 'Steps', 'Expected Result', 'Actual Results', 'Test Status', 'Comments', 'Issue',
   ]];
 
   forms.forEach((form) => {
@@ -42,14 +42,14 @@ export function buildQaScenariosCsv(forms: readonly QaScenarioCsvForm[]): string
       return;
     }
     if (form.scenarios.length === 0) {
-      rows.push([form.title, 'VALID', '', '', '', '', '', '', 'Pending', '', '', '']);
+      rows.push([form.title, 'VALID', '', '', '', '', '', '', '', 'Pending', '', '']);
       return;
     }
     form.scenarios.forEach((scenario) => {
       rows.push([
         form.title, 'VALID', scenario.id, scenario.title, scenario.category,
         scenario.priority, scenario.steps, scenario.expected,
-        scenario.testStatus ?? 'Pending', scenario.actualResults ?? '', scenario.comments ?? '', '',
+        scenario.actualResults ?? '', scenario.testStatus ?? 'Pending', scenario.comments ?? '', '',
       ]);
     });
   });
