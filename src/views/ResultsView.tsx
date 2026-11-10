@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Download, FileText, ArrowLeft, Eye } from 'lucide-react';
+import { buildBatchComparisonCsv } from '@/lib/reportCsv';
 import { useApp, type FormListHistoryEntry } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,12 @@ const statusTone = (status: string): 'success' | 'warning' | 'error' | 'info' | 
   if (status === 'INVALID' || status === 'MISSING_IN_NEW') return 'error';
   return 'neutral';
 };
+
+function downloadBatchCsv(run: FormListHistoryEntry) {
+  const csv = buildBatchComparisonCsv(run.result);
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'form-studio-batch-comparison-results.csv'; anchor.click(); URL.revokeObjectURL(url);
+}
 
 export function ResultsView() {
   const { formListHistory } = useApp();
@@ -76,7 +83,7 @@ export function ResultsView() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><Button variant="ghost" size="sm" onClick={() => setSelectedRun(null)}><ArrowLeft size={15}/> All history</Button><h2 className="mt-2 text-lg font-semibold">{selectedRun.oldFileName} <span className="text-slate-400">vs</span> {selectedRun.newFileName}</h2><p className="text-xs text-slate-500">{new Date(selectedRun.executedAt).toLocaleString()}</p></div>
       </div>
-      <Card title="Batch Comparison Results" description="Select any summary tile to filter the forms below.">
+      <Card title="Batch Comparison Results" description="Select any summary tile to filter the forms below." actions={<Button size="sm" variant="outline" onClick={() => downloadBatchCsv(selectedRun)}><Download size={14}/> Export CSV</Button>}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
           {metrics.map((metric) => <button key={metric.filter} onClick={() => {setStatusFilter(metric.filter);}} className={`rounded-lg border p-3 text-left transition hover:border-blue-400 ${statusFilter===metric.filter?'border-blue-500 bg-blue-50 dark:bg-blue-900/20':'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800'}`}><div className="text-2xl font-bold tabular-nums">{metric.value}</div><div className="text-xs text-slate-500">{metric.label}</div></button>)}
         </div>
