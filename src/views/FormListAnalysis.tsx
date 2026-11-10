@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { parseJsonFileContent } from '@/lib/fileComparison';
+import { buildQaScenariosCsv } from '@/lib/reportCsv';
 
 type Priority = 'HIGH' | 'MEDIUM' | 'LOW';
 interface Scenario { id: string; title: string; category: string; priority: Priority; formTitle: string; steps: string; expected: string; }
@@ -103,6 +104,12 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
     'Verify initial and cleared state',
   ] : [];
   const unique = analyses?.flatMap((form) => form.scenarios.filter((scenario) => !shared.includes(scenario.title))) ?? [];
+  const exportCsvReport = () => {
+    if (!analyses) return;
+    const csv = buildQaScenariosCsv(analyses);
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'form-studio-qa-scenarios.csv'; anchor.click(); URL.revokeObjectURL(url);
+  };
   const exportReport = () => {
     if (!analyses) return;
     const report = { forms: analyses, sharedScenarios: shared, uniqueScenarios: unique, summary: { forms: analyses.length, validForms: analyses.filter((form) => !form.issue).length, invalidForms: analyses.filter((form) => !!form.issue).length, scenarios: analyses.reduce((sum, form) => sum + form.scenarios.length, 0), high: analyses.reduce((sum, form) => sum + form.scenarios.filter((s) => s.priority === 'HIGH').length, 0) } };
@@ -119,7 +126,7 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
       {error && <div role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       <div className="mt-5 flex flex-wrap gap-3"><Button onClick={run} disabled={!file}><Play size={15} /> Analyze forms</Button><Button variant="outline" onClick={onBack}>Back to File Comparison</Button></div>
     </Card>
-    {analyses && <Card title="QA Analysis Results" description={`${analyses.filter((form) => !form.issue).length} valid forms analyzed from ${analyses.length} records.`} actions={<Button size="sm" variant="outline" onClick={exportReport}><Download size={14} /> Export QA report</Button>}>
+    {analyses && <Card title="QA Analysis Results" description={`${analyses.filter((form) => !form.issue).length} valid forms analyzed from ${analyses.length} records.`} actions={<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={exportReport}><Download size={14} /> Export JSON</Button><Button size="sm" variant="outline" onClick={exportCsvReport}><Download size={14} /> Export CSV</Button></div>}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4"><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{analyses.length}</div><div className="text-xs text-slate-500">Forms</div></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{analyses.reduce((sum, form) => sum + form.scenarios.length, 0)}</div><div className="text-xs text-slate-500">Scenarios</div></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{analyses.reduce((sum, form) => sum + form.scenarios.filter((s) => s.priority === 'HIGH').length, 0)}</div><div className="text-xs text-slate-500">High priority</div></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{analyses.filter((form) => !!form.issue).length}</div><div className="text-xs text-slate-500">Invalid records</div></div></div>
       <div className="mb-5"><h3 className="mb-2 text-sm font-semibold">Shared scenarios</h3><ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">{shared.map((item) => <li key={item}>{item}</li>)}</ul></div>
       {analyses.map((form) => <div key={form.title} className="mb-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{form.title}</h3>{form.issue ? <Badge tone="error">INVALID</Badge> : <Badge tone="success">{form.scenarios.length} scenarios</Badge>}</div>{form.issue ? <p className="text-sm text-red-600">{form.issue}</p> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-slate-500"><th className="p-2">Scenario</th><th className="p-2">Category</th><th className="p-2">Priority</th><th className="p-2">Expected result</th></tr></thead><tbody>{form.scenarios.map((scenario) => <tr key={scenario.id} className="border-t border-slate-100 dark:border-slate-700"><td className="p-2 font-medium">{scenario.title}</td><td className="p-2">{scenario.category}</td><td className="p-2"><Badge tone={scenario.priority === 'HIGH' ? 'error' : scenario.priority === 'MEDIUM' ? 'warning' : 'info'}>{scenario.priority}</Badge></td><td className="p-2">{scenario.expected}</td></tr>)}</tbody></table></div>}</div>)}
