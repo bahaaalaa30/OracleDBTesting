@@ -44,7 +44,7 @@ export function ResultsView() {
       <div className="space-y-4">
         <Card title="Comparison History" description="Your Form Studio list comparisons are saved in this browser and remain available after refresh.">
           {formListHistory.length === 0 ? (
-            <EmptyState icon={<FileText size={40} />} title="No comparison history yet" description="Run a Form Studio List Comparison to save its result here." />
+            <EmptyState icon={<FileText size={40} />} title="No comparison history yet" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -83,7 +83,7 @@ export function ResultsView() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><Button variant="ghost" size="sm" onClick={() => setSelectedRun(null)}><ArrowLeft size={15}/> All history</Button><h2 className="mt-2 text-lg font-semibold">{selectedRun.oldFileName} <span className="text-slate-400">vs</span> {selectedRun.newFileName}</h2><p className="text-xs text-slate-500">{new Date(selectedRun.executedAt).toLocaleString()}</p></div>
       </div>
-      <Card title="Batch Comparison Results" description="Select any summary tile to filter the forms below." actions={<Button size="sm" variant="outline" onClick={() => downloadBatchCsv(selectedRun)}><Download size={14}/> Export CSV</Button>}>
+      <Card title="Batch Comparison Results" actions={<Button size="sm" variant="outline" onClick={() => downloadBatchCsv(selectedRun)}><Download size={14}/> Export CSV</Button>}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
           {metrics.map((metric) => <button key={metric.filter} onClick={() => {setStatusFilter(metric.filter);}} className={`rounded-lg border p-3 text-left transition hover:border-blue-400 ${statusFilter===metric.filter?'border-blue-500 bg-blue-50 dark:bg-blue-900/20':'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800'}`}><div className="text-2xl font-bold tabular-nums">{metric.value}</div><div className="text-xs text-slate-500">{metric.label}</div></button>)}
         </div>
@@ -122,8 +122,8 @@ export function ReportsView() {
 
   return (
     <div className="space-y-4">
-      <Card title="Reports & Export" description="Choose one or more saved Form Studio comparisons and export their detailed results.">
-        {formListHistory.length===0 ? <EmptyState icon={<FileText size={40}/>} title="No reports available" description="Run a Form Studio list comparison first. Its report will appear here automatically."/> : <>
+      <Card title="Reports & Export">
+        {formListHistory.length===0 ? <EmptyState icon={<FileText size={40}/>} title="No reports available"/> : <>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-slate-500">{selectedIds.size} of {formListHistory.length} runs selected</span><div className="flex gap-2"><Button size="sm" variant="ghost" onClick={()=>setSelectedIds(new Set(formListHistory.map((run)=>run.id)))}>Select all</Button><Button size="sm" variant="ghost" onClick={()=>setSelectedIds(new Set())}>Clear</Button></div></div>
           <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-700 dark:border-slate-700">{formListHistory.map((run)=><label key={run.id} className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800"><input type="checkbox" checked={selectedIds.has(run.id)} onChange={()=>setSelectedIds((prev)=>{const next=new Set(prev);next.has(run.id)?next.delete(run.id):next.add(run.id);return next;})}/><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{run.oldFileName} → {run.newFileName}</span><span className="text-xs text-slate-500">{new Date(run.executedAt).toLocaleString()} · {run.result.items.length} forms · {run.result.summary.different} different</span></span></label>)}</div>
           <div className="mt-4 flex flex-wrap gap-2"><Button onClick={exportJson} disabled={!selectedIds.size}><Download size={15}/> Export JSON</Button><Button variant="outline" onClick={exportCsv} disabled={!selectedIds.size}><Download size={15}/> Export CSV</Button></div>
