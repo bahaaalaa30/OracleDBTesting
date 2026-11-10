@@ -1,6 +1,8 @@
 import { formatJsonPathForDisplay, getFormListStatusLabel, type FormListComparisonResult } from './formListComparison';
 import type { JsonComparisonResult } from './fileComparison';
 
+export type QaTestExecutionStatus = 'Pending' | 'Executing' | 'Pass' | 'Failed' | 'Ignored';
+
 export interface QaScenarioCsvScenario {
   id: string;
   title: string;
@@ -8,6 +10,9 @@ export interface QaScenarioCsvScenario {
   priority: string;
   steps: string;
   expected: string;
+  testStatus?: QaTestExecutionStatus;
+  actualResults?: string;
+  comments?: string;
 }
 
 export interface QaScenarioCsvForm {
@@ -28,22 +33,23 @@ export function serializeCsvRows(rows: readonly (readonly unknown[])[]): string 
 export function buildQaScenariosCsv(forms: readonly QaScenarioCsvForm[]): string {
   const rows: unknown[][] = [[
     'Form Title', 'Record Status', 'Scenario ID', 'Scenario', 'Category',
-    'Priority', 'Steps', 'Expected Result', 'Issue',
+    'Priority', 'Steps', 'Expected Result', 'Test Status', 'Actual Results', 'Comments', 'Issue',
   ]];
 
   forms.forEach((form) => {
     if (form.issue) {
-      rows.push([form.title, 'INVALID', '', '', '', '', '', '', form.issue]);
+      rows.push([form.title, 'INVALID', '', '', '', '', '', '', '', '', '', form.issue]);
       return;
     }
     if (form.scenarios.length === 0) {
-      rows.push([form.title, 'VALID', '', '', '', '', '', '', '']);
+      rows.push([form.title, 'VALID', '', '', '', '', '', '', 'Pending', '', '', '']);
       return;
     }
     form.scenarios.forEach((scenario) => {
       rows.push([
         form.title, 'VALID', scenario.id, scenario.title, scenario.category,
-        scenario.priority, scenario.steps, scenario.expected, '',
+        scenario.priority, scenario.steps, scenario.expected,
+        scenario.testStatus ?? 'Pending', scenario.actualResults ?? '', scenario.comments ?? '', '',
       ]);
     });
   });
