@@ -103,7 +103,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try { return JSON.parse(localStorage.getItem('form-studio-comparison-history') ?? '[]') as FormListHistoryEntry[]; }
     catch { return []; }
   });
-  useEffect(() => { localStorage.setItem('form-studio-comparison-history', JSON.stringify(formListHistory)); }, [formListHistory]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('form-studio-comparison-history', JSON.stringify(formListHistory));
+    } catch {
+      // Keep the current session usable when a large report exceeds browser storage quota.
+    }
+  }, [formListHistory]);
   const addFormListHistory = useCallback((entry: FormListHistoryEntry) => setFormListHistory((previous) => [entry, ...previous]), []);
   const [demoMode, setDemoMode] = useState(false);
 
