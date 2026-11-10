@@ -76,6 +76,27 @@ describe('Form list comparison by schema title', () => {
   });
 });
 
+describe('Form source file tracking', () => {
+  it('tracks both source files for matched forms and the correct side for unmatched forms', () => {
+    const result = compareFormLists(
+      [form('Shared Form'), form('Old Only')],
+      [form('Shared Form'), form('New Only')],
+      { old: 'legacy-forms.json', new: 'current-forms.json' },
+    );
+
+    expect(result.items.find((item) => item.title === 'Shared Form')).toMatchObject({
+      oldSourceFile: 'legacy-forms.json',
+      newSourceFile: 'current-forms.json',
+    });
+    expect(result.items.find((item) => item.title === 'Old Only')).toMatchObject({
+      oldSourceFile: 'legacy-forms.json',
+    });
+    expect(result.items.find((item) => item.title === 'New Only')).toMatchObject({
+      newSourceFile: 'current-forms.json',
+    });
+  });
+});
+
 describe('Form lifecycle status filtering', () => {
   it('captures Old and New lifecycle statuses independently from the top-level record', () => {
     const result = compareFormLists([form('Shared Form', 'OLD_FIELD', 'APPROVED')], [form('Shared Form', 'NEW_FIELD', 'PUBLISHED')]);
