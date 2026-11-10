@@ -42,7 +42,7 @@ export function ResultsView() {
   if (!selectedRun) {
     return (
       <div className="space-y-4">
-        <Card title="Comparison History" description="Your Form Studio list comparisons are saved in this browser and remain available after refresh.">
+        <Card title="Comparison History">
           {formListHistory.length === 0 ? (
             <EmptyState icon={<FileText size={40} />} title="No comparison history yet" />
           ) : (
