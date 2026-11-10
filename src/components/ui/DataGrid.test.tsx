@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataGrid } from './DataGrid';
 
@@ -16,25 +16,29 @@ afterEach(() => cleanup());
 
 describe('DataGrid', () => {
   it('renders column headers and row values', () => {
-    render(<DataGrid columns={columns} rows={rows} />);
+    const { container } = render(<DataGrid columns={columns} rows={rows} />);
+    const grid = within(container);
 
-    expect(screen.getByText('Name')).toBeTruthy();
-    expect(screen.getByText('Count')).toBeTruthy();
-    expect(screen.getByText('Patients')).toBeTruthy();
-    expect(screen.getByText('25')).toBeTruthy();
+    expect(grid.getByRole('columnheader', { name: 'Name' })).toBeTruthy();
+    expect(grid.getByRole('columnheader', { name: 'Count' })).toBeTruthy();
+    expect(grid.getByText('Patients')).toBeTruthy();
+    expect(grid.getByText('25')).toBeTruthy();
   });
 
   it('renders the configured empty message when there are no rows', () => {
-    render(<DataGrid columns={columns} rows={[]} emptyMessage="No database objects found" />);
+    const { container } = render(
+      <DataGrid columns={columns} rows={[]} emptyMessage="No database objects found" />,
+    );
 
-    expect(screen.getByText('No database objects found')).toBeTruthy();
+    expect(within(container).getByText('No database objects found')).toBeTruthy();
   });
 
   it('shows the loading state instead of stale rows', () => {
-    render(<DataGrid columns={columns} rows={rows} loading />);
+    const { container } = render(<DataGrid columns={columns} rows={rows} loading />);
+    const grid = within(container);
 
-    expect(screen.getByText('Loading…')).toBeTruthy();
-    expect(screen.queryByText('Patients')).toBeNull();
+    expect(grid.getByText('Loading…')).toBeTruthy();
+    expect(grid.queryByText('Patients')).toBeNull();
   });
 
   it('uses a custom cell renderer and passes the complete row', () => {
@@ -42,14 +46,14 @@ describe('DataGrid', () => {
       `${String(value)} from ${String(row.name)}`,
     );
 
-    render(
+    const { container } = render(
       <DataGrid
         columns={[{ key: 'count', label: 'Count', render: renderCell }]}
         rows={[{ name: 'Patients', count: 12 }]}
       />,
     );
 
-    expect(screen.getByText('12 from Patients')).toBeTruthy();
+    expect(within(container).getByText('12 from Patients')).toBeTruthy();
     expect(renderCell).toHaveBeenCalledWith(12, { name: 'Patients', count: 12 });
   });
 
@@ -64,16 +68,18 @@ describe('DataGrid', () => {
 
   it('calls the sort callback with the selected column', () => {
     const onSort = vi.fn();
-    render(<DataGrid columns={columns} rows={rows} onSort={onSort} />);
+    const { container } = render(
+      <DataGrid columns={columns} rows={rows} onSort={onSort} />,
+    );
 
-    fireEvent.click(screen.getByText('Name'));
+    fireEvent.click(within(container).getByRole('columnheader', { name: 'Name' }));
 
     expect(onSort).toHaveBeenCalledWith('name');
   });
 
   it('shows pagination range and moves to the next page', () => {
     const onPageChange = vi.fn();
-    render(
+    const { container } = render(
       <DataGrid
         columns={columns}
         rows={rows}
@@ -83,11 +89,12 @@ describe('DataGrid', () => {
         onPageChange={onPageChange}
       />,
     );
+    const grid = within(container);
 
-    expect(screen.getByText('1–10 of 45')).toBeTruthy();
-    expect(screen.getByText('1 / 5')).toBeTruthy();
+    expect(grid.getByText('1–10 of 45')).toBeTruthy();
+    expect(grid.getByText('1 / 5')).toBeTruthy();
 
-    const buttons = screen.getAllByRole('button');
+    const buttons = grid.getAllByRole('button');
     expect(buttons[0].hasAttribute('disabled')).toBe(true);
     fireEvent.click(buttons[1]);
 
@@ -95,7 +102,7 @@ describe('DataGrid', () => {
   });
 
   it('disables next-page navigation on the last page', () => {
-    render(
+    const { container } = render(
       <DataGrid
         columns={columns}
         rows={rows}
@@ -105,9 +112,10 @@ describe('DataGrid', () => {
         onPageChange={vi.fn()}
       />,
     );
+    const grid = within(container);
 
-    const buttons = screen.getAllByRole('button');
+    const buttons = grid.getAllByRole('button');
     expect(buttons[1].hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText('41–45 of 45')).toBeTruthy();
+    expect(grid.getByText('41–45 of 45')).toBeTruthy();
   });
 });
