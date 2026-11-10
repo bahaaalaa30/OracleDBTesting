@@ -1,4 +1,4 @@
-import type { ColumnInfo, DatabaseObject, DataComparisonRequest, DataComparisonResult, DataPreviewRequest, DataPreviewResponse, StructureComparisonRequest, StructureComparisonResult, TableStructure } from '@/types';
+import type { ColumnInfo, DatabaseObject, DataComparisonRequest, DataComparisonResult, RowDiff, DataPreviewRequest, DataPreviewResponse, StructureComparisonRequest, StructureComparisonResult, TableStructure } from '@/types';
 
 type DemoTable = { object: DatabaseObject; structure: TableStructure; rows: Record<string, unknown>[] };
 
@@ -83,7 +83,7 @@ export const demoCompareData = (req:DataComparisonRequest):DataComparisonResult 
   if(!oldKey||!newKey) throw new Error('Select matching key columns');
   const newByKey=new Map(newRows.map(r=>[String(r[newKey]),r]));
   const oldKeys=new Set(oldRows.map(r=>String(r[oldKey])));
-  const rowDiffs=oldRows.map(oldRow=>{
+  const rowDiffs: RowDiff[] = oldRows.map(oldRow=>{
     const key=String(oldRow[oldKey]), newRow=newByKey.get(key);
     if(!newRow) return {keyValues:{[oldKey]:oldRow[oldKey]},status:'MISSING' as const,changes:[]};
     const changes:{column:string;oldValue:unknown;newValue:unknown}[]=[];
