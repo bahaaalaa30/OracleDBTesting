@@ -60,7 +60,7 @@ export function FileComparisonView() {
 
   const diffs=jsonResult?.diffs??[];
   return <div className="space-y-5">
-    <Card title="File Comparison" description="Compare two exported JSON files directly in your browser, or use the Form Studio workflows for complete form lists. All processing is local.">
+    <Card title="File Comparison">
       <div className="mb-5 flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={()=>{setBatchMode(true);setJsonResult(null);}}><FileJson size={15}/> Form Studio List Comparison</Button>
         <Button size="sm" variant="outline" onClick={()=>{setAnalysisMode(true);setJsonResult(null);}}><SlidersHorizontal size={15}/> Analyze Form List</Button>
