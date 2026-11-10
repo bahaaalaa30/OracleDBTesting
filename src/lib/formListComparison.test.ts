@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { compareFormLists, formatJsonPathForDisplay, getFormListStatusLabel } from './formListComparison';
+import { compareFormLists, formatJsonPathForDisplay, getFormListStatusLabel, formStatusMatchesFilter } from './formListComparison';
 
-const form = (title: string, fieldName = 'FIELD_1') => ({
+const form = (title: string, fieldName = 'FIELD_1', status = 'DRAFT') => ({
+  status,
   currentVersion: { schemaJson: JSON.stringify({ title, pages: [{ name: 'page1', elements: [{ type: 'text', name: fieldName }] }] }) },
 });
 
@@ -72,6 +73,22 @@ describe('Form list comparison by schema title', () => {
 
   it('requires a JSON array for each side', () => {
     expect(() => compareFormLists({}, [])).toThrow('Old JSON must contain an array');
+  });
+});
+
+describe('Form lifecycle status filtering', () => {
+  it('captures Old and New lifecycle statuses independently from the top-level record', () => {
+    const result = compareFormLists([form('Shared Form', 'OLD_FIELD', 'APPROVED')], [form('Shared Form', 'NEW_FIELD', 'PUBLISHED')]);
+    expect(result.items[0]).toMatchObject({ oldFormStatus: 'APPROVED', newFormStatus: 'PUBLISHED' });
+  });
+
+  it('matches a selected lifecycle status when either side has that status', () => {
+    const result = compareFormLists([form('Shared Form', 'OLD_FIELD', 'APPROVED')], [form('Shared Form', 'NEW_FIELD', 'PUBLISHED')]);
+    const item = result.items[0];
+    expect(formStatusMatchesFilter(item, 'APPROVED')).toBe(true);
+    expect(formStatusMatchesFilter(item, 'PUBLISHED')).toBe(true);
+    expect(formStatusMatchesFilter(item, 'DRAFT')).toBe(false);
+    expect(formStatusMatchesFilter(item, 'ALL')).toBe(true);
   });
 });
 
