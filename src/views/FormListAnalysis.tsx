@@ -128,7 +128,7 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'form-studio-qa-analysis.json'; anchor.click(); URL.revokeObjectURL(url);
   };
   return <div className="space-y-5">
-    <Card title="Form Studio List Analysis" description="Upload one JSON form or an array of forms to generate practical QA scenarios, priorities, shared checks, and form-specific checks.">
+    <Card title="Form Studio List Analysis">
       <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center hover:border-blue-400 dark:border-slate-600 dark:bg-slate-800/50">
         <input type="file" accept=".json,application/json" className="sr-only" onChange={(event) => { const selected = event.target.files?.[0]; if (selected) load(selected); event.currentTarget.value = ''; }} />
         <Upload className="mb-2 text-slate-400" size={22} /><span className="text-sm font-semibold">Forms JSON file</span>
