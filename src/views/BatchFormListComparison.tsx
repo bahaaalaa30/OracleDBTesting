@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { parseJsonFileContent } from '@/lib/fileComparison';
+import { buildBatchComparisonCsv } from '@/lib/reportCsv';
 import { compareFormLists, formatJsonPathForDisplay, getFormListStatusLabel, formStatusMatchesFilter, type FormLifecycleStatusFilter, type FormListComparisonResult, type FormListItemResult } from '@/lib/formListComparison';
 
 interface LoadedFile { name: string; content: string; }
@@ -30,6 +31,11 @@ function readFile(file: File): Promise<LoadedFile> {
 function downloadReport(result: FormListComparisonResult) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'form-studio-list-comparison-report.json'; anchor.click(); URL.revokeObjectURL(url);
+}
+function downloadCsvReport(result: FormListComparisonResult) {
+  const csv = buildBatchComparisonCsv(result);
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'form-studio-batch-comparison-results.csv'; anchor.click(); URL.revokeObjectURL(url);
 }
 function tone(status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' {
   if (status === 'MATCHED') return 'success';
@@ -113,7 +119,7 @@ export function BatchFormListComparison({ onBack }: { onBack: () => void }) {
       {error && <div role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       <div className="mt-5 flex flex-wrap items-center gap-3"><Button onClick={run} disabled={busy || !oldFile || !newFile}><Play size={15}/> Compare form lists</Button><Button variant="outline" onClick={onBack}>Back to File Comparison</Button><span className="text-xs text-slate-400">{busy?'Reading file…':oldFile&&newFile?'Both files loaded':'Upload both JSON files'}</span></div>
     </Card>
-    {result && !selectedItem && <Card title="Batch Comparison Results" description={`${result.oldCount} Old records and ${result.newCount} New records processed. Click a summary tile to filter, or a form row to inspect it.`} actions={<Button size="sm" variant="outline" onClick={()=>downloadReport(result)}><Download size={14}/> Export JSON report</Button>}>
+    {result && !selectedItem && <Card title="Batch Comparison Results" description={`${result.oldCount} Old records and ${result.newCount} New records processed. Click a summary tile to filter, or a form row to inspect it.`} actions={<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={()=>downloadReport(result)}><Download size={14}/> Export JSON</Button><Button size="sm" variant="outline" onClick={()=>downloadCsvReport(result)}><Download size={14}/> Export CSV</Button></div>}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         {metrics.map(([label,value,filter])=><button key={filter} onClick={()=>setStatusFilter(filter as StatusFilter)} className={`rounded-lg border p-3 text-left transition hover:border-blue-400 ${statusFilter===filter?'border-blue-500 bg-blue-50 dark:bg-blue-900/20':'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800'}`}><div className="text-2xl font-bold tabular-nums">{value}</div><div className="text-xs text-slate-500">{label}</div></button>)}
       </div>
