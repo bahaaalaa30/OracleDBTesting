@@ -19,6 +19,9 @@ export interface FormListItemResult {
   newIndex?: number;
   differences?: JsonComparisonResult;
   issue?: string;
+  sourceSide?: 'Old' | 'New';
+  sourceFile?: string;
+  sample?: string;
 }
 
 export interface FormListComparisonResult {
@@ -47,7 +50,18 @@ function getSchema(record: Record<string, unknown>): Record<string, unknown> {
   return schema;
 }
 
-function parseForms(value: unknown, side: string): { forms: ParsedForm[]; invalid: FormListItemResult[] } {
+function createRecordSample(value: unknown): string {
+  let sample: string;
+  try {
+    sample = JSON.stringify(value, null, 2) ?? String(value);
+  } catch {
+    sample = String(value);
+  }
+  const maxLength = 1200;
+  return sample.length > maxLength ? `${sample.slice(0, maxLength)}\\n… (sample truncated)` : sample;
+}
+
+function parseForms(value: unknown, side: 'Old' | 'New', sourceFile?: string): { forms: ParsedForm[]; invalid: FormListItemResult[] } {
   if (!Array.isArray(value)) throw new Error(`${side} JSON must contain an array of forms.`);
   const forms: ParsedForm[] = [];
   const invalid: FormListItemResult[] = [];
@@ -60,15 +74,29 @@ function parseForms(value: unknown, side: string): { forms: ParsedForm[]; invali
       if (!title) throw new Error('Schema title is missing or empty.');
       forms.push({ title, schema, index });
     } catch (error) {
-      invalid.push({ title: `Record #${index + 1}`, status: 'INVALID', oldIndex: side === 'Old' ? index : undefined, newIndex: side === 'New' ? index : undefined, issue: error instanceof Error ? error.message : 'Invalid form record.' });
+      invalid.push({
+        title: `Record #${index + 1}`,
+        status: 'INVALID',
+        oldIndex: side === 'Old' ? index : undefined,
+        newIndex: side === 'New' ? index : undefined,
+        issue: error instanceof Error ? error.message : 'Invalid form record.',
+        sourceSide: side,
+        sourceFile,
+        sample: createRecordSample(item),
+      });
     }
   });
   return { forms, invalid };
 }
 
-export function compareFormLists(oldValue: unknown, newValue: unknown): FormListComparisonResult {
-  const oldParsed = parseForms(oldValue, 'Old');
-  const newParsed = parseForms(newValue, 'New');
+export interface FormListSourceFiles {
+  old?: string;
+  new?: string;
+}
+
+export function compareFormLists(oldValue: unknown, newValue: unknown, sourceFiles: FormListSourceFiles = {}): FormListComparisonResult {
+  const oldParsed = parseForms(oldValue, 'Old', sourceFiles.old);
+  const newParsed = parseForms(newValue, 'New', sourceFiles.new);
   const oldCounts = new Map<string, number>();
   const newCounts = new Map<string, number>();
   oldParsed.forms.forEach((form) => oldCounts.set(form.title, (oldCounts.get(form.title) ?? 0) + 1));
