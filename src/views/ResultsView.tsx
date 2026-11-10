@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/Feedback';
+import { getFormListStatusLabel } from '@/lib/formListComparison';
 
 type StatusFilter = 'ALL' | 'MATCHED' | 'IDENTICAL' | 'DIFFERENT' | 'MISSING_IN_NEW' | 'NEW_IN_NEW' | 'DUPLICATE_TITLE' | 'INVALID';
 
@@ -65,7 +66,7 @@ export function ResultsView() {
     {label:'Identical',value:summary.identical,filter:'IDENTICAL'},
     {label:'Different',value:summary.different,filter:'DIFFERENT'},
     {label:'Missing in New',value:summary.missingInNew,filter:'MISSING_IN_NEW'},
-    {label:'New in New',value:summary.newInNew,filter:'NEW_IN_NEW'},
+    {label:'Exist only at new',value:summary.newInNew,filter:'NEW_IN_NEW'},
     {label:'Duplicate titles',value:summary.duplicateTitles,filter:'DUPLICATE_TITLE'},
     {label:'Invalid records',value:summary.invalid,filter:'INVALID'},
   ];
@@ -82,13 +83,13 @@ export function ResultsView() {
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <label className="text-xs text-slate-500" htmlFor="history-filter">Show:</label>
           <select id="history-filter" value={statusFilter} onChange={(e)=>{setStatusFilter(e.target.value as StatusFilter);}} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900">
-            <option value="ALL">All results</option><option value="MATCHED">Matched</option><option value="IDENTICAL">Identical</option><option value="DIFFERENT">Different</option><option value="MISSING_IN_NEW">Missing in New</option><option value="NEW_IN_NEW">New in New</option><option value="DUPLICATE_TITLE">Duplicate titles</option><option value="INVALID">Invalid records</option>
+            <option value="ALL">All results</option><option value="MATCHED">Matched</option><option value="IDENTICAL">Identical</option><option value="DIFFERENT">Different</option><option value="MISSING_IN_NEW">Missing in New</option><option value="NEW_IN_NEW">Exist only at new</option><option value="DUPLICATE_TITLE">Duplicate titles</option><option value="INVALID">Invalid records</option>
           </select>
           <span className="text-xs text-slate-400">{filteredItems.length} form(s)</span>
         </div>
         <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
           <table className="w-full text-left text-xs"><thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="p-3">Form title</th><th className="p-3">Status</th><th className="p-3">Differences</th><th className="p-3">Issue / Details</th></tr></thead>
-            <tbody>{filteredItems.map((item,index)=><tr key={`${item.title}-${index}`} className="border-t border-slate-100 dark:border-slate-700"><td className="p-3 font-medium">{item.title}</td><td className="p-3"><Badge tone={statusTone(item.status)}>{item.status}</Badge></td><td className="p-3">{item.differences?.diffs.length ?? '—'}</td><td className="max-w-lg break-words p-3">{item.issue ?? item.differences?.diffs.slice(0,4).map((diff)=>`${diff.kind}: ${diff.path}`).join(' | ') ?? (item.status==='MATCHED'?'No schema differences':'—')}</td></tr>)}</tbody>
+            <tbody>{filteredItems.map((item,index)=><tr key={`${item.title}-${index}`} className="border-t border-slate-100 dark:border-slate-700"><td className="p-3 font-medium">{item.title}</td><td className="p-3"><Badge tone={statusTone(item.status)}>{getFormListStatusLabel(item.status)}</Badge></td><td className="p-3">{item.differences?.diffs.length ?? '—'}</td><td className="max-w-lg break-words p-3">{item.issue ?? item.differences?.diffs.slice(0,4).map((diff)=>`${diff.kind}: ${diff.path}`).join(' | ') ?? (item.status==='MATCHED'?'No schema differences':'—')}</td></tr>)}</tbody>
           </table>
         </div>
       </Card>
@@ -107,7 +108,7 @@ export function ReportsView() {
   };
   const exportCsv = () => {
     const rows = [['Run Date','Old File','New File','Form Title','Status','Difference Count','Issue']];
-    selectedRuns.forEach((run)=>run.result.items.forEach((item)=>rows.push([new Date(run.executedAt).toISOString(),run.oldFileName,run.newFileName,item.title,item.status,String(item.differences?.diffs.length ?? ''),item.issue ?? ''])));
+    selectedRuns.forEach((run)=>run.result.items.forEach((item)=>rows.push([new Date(run.executedAt).toISOString(),run.oldFileName,run.newFileName,item.title,getFormListStatusLabel(item.status),String(item.differences?.diffs.length ?? ''),item.issue ?? ''])));
     const csv=rows.map((row)=>row.map((value)=>`"${String(value).replace(/"/g,'""')}"`).join(',')).join('\n');
     downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),'form-studio-comparison-reports.csv');
   };
