@@ -51,7 +51,8 @@ describe('CSV report exports', () => {
 
     expect(csv).toContain('"Form Title","Comparison Status","Old Form Status","New Form Status"');
     expect(csv).toContain('"Shared Form","MATCHED","APPROVED","PUBLISHED","legacy.json","current.json"');
-    expect(csv).toContain('CHANGED: pages ›');
+    expect(csv).toContain('REMOVED: pages › 0 › elements › OLD_FIELD');
+    expect(csv).toContain('ADDED: pages › 0 › elements › NEW_FIELD');
     expect(csv).toContain('"Record #2","INVALID","DRAFT","","legacy.json"');
     const invalidIssue = result.items.find((item) => item.status === 'INVALID')?.issue;
     expect(invalidIssue).toBeTruthy();
