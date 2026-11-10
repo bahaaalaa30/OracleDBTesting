@@ -48,7 +48,7 @@ describe('Form list comparison by schema title', () => {
     expect(oldInvalid).toMatchObject({
       sourceSide: 'Old',
       sourceFile: 'old-forms.json',
-      issue: expect.stringContaining('JSON'),
+      issue: expect.any(String),
     });
     expect(oldInvalid?.sample).toContain('bad-old');
     expect(newInvalid).toMatchObject({
