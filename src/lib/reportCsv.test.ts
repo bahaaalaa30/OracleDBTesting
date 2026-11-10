@@ -77,7 +77,7 @@ describe('JSON comparison CSV export', () => {
 
     expect(csv).toContain('"Old File","New File","JSON Profile","Compare Array Order","Change Type","JSON Path"');
     expect(csv).toContain('"old-export.json","new-export.json","generic","No","CHANGED","title","Old title","New title","Value changed"');
-    expect(csv).toContain('"ADDED","pages[1]"');
+    expect(csv).toContain('"ADDED","pages[page2]"');
     expect(csv).toContain('"Added Count","Removed Count","Changed Count","Moved Count","Unchanged Count"');
   });
 
@@ -103,7 +103,6 @@ describe('JSON comparison CSV export', () => {
       compareArrayOrder: false,
     });
 
-    expect(csv).toContain('"{""enabled"":false}"');
-    expect(csv).toContain('"{""enabled"":true}"');
+    expect(csv).toContain('"settings.enabled","false","true"');
   });
 });
