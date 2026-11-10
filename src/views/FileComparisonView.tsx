@@ -34,11 +34,11 @@ export function FileComparisonView() {
   const [analysisMode,setAnalysisMode]=useState(false);
   const [oldFile,setOldFile]=useState<LoadedFile|null>(null);
   const [newFile,setNewFile]=useState<LoadedFile|null>(null);
-  const [formMode,setFormMode]=useState<FormMode>('form-studio');
-  const [compareOrder,setCompareOrder]=useState(false);
   const [jsonResult,setJsonResult]=useState<JsonComparisonResult|null>(null);
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
+  const formMode: FormMode = 'form-studio';
+  const compareOrder = false;
 
   const loadSide=async(side:'old'|'new',file:File)=>{
     setError('');setJsonResult(null);setBusy(true);
@@ -66,16 +66,6 @@ export function FileComparisonView() {
         <Button size="sm" variant="outline" onClick={()=>{setAnalysisMode(true);setJsonResult(null);}}><SlidersHorizontal size={15}/> Analyze Form List</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2"><FileDrop side="Old" file={oldFile} onFile={(file)=>void loadSide('old',file)}/><FileDrop side="New" file={newFile} onFile={(file)=>void loadSide('new',file)}/></div>
-      <div className="mt-5 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><SlidersHorizontal size={16}/> JSON comparison options</div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="text-sm text-slate-600 dark:text-slate-300">JSON profile
-            <select value={formMode} onChange={(e)=>{setFormMode(e.target.value as FormMode);setJsonResult(null);}} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"><option value="form-studio">Form Studio JSON</option><option value="generic">Generic JSON</option></select>
-          </label>
-          <label className="flex items-center gap-2 pt-6 text-sm text-slate-600 dark:text-slate-300"><input type="checkbox" checked={compareOrder} onChange={(e)=>setCompareOrder(e.target.checked)}/> Treat array order changes as differences</label>
-        </div>
-        {formMode==='form-studio'&&<p className="mt-3 text-xs text-slate-500">Form Studio mode ignores editor metadata and normalizes known empty/default values while preserving functional schema differences.</p>}
-      </div>
       {error&&<div role="alert" className="mt-4 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{error}</div>}
       <div className="mt-5 flex flex-wrap items-center gap-3"><Button onClick={runComparison} disabled={busy||!oldFile||!newFile}><Play size={15}/> Compare JSON files</Button><span className="text-xs text-slate-400">{busy?'Reading file…':oldFile&&newFile?'Both files loaded':'Upload one Old file and one New file'}</span></div>
     </Card>
