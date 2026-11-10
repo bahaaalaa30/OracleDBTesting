@@ -94,11 +94,11 @@ function parseForms(value: unknown, side: 'Old' | 'New', sourceFile?: string): {
         sourceSide: side,
         sourceFile,
         sample: createRecordSample(item),
-        ...(typeof record?.status === 'string' && side === 'Old'
-          ? { oldFormStatus: record.status.trim().toUpperCase() }
+        ...(typeof asRecord(item)?.status === 'string' && side === 'Old'
+          ? { oldFormStatus: String(asRecord(item)?.status).trim().toUpperCase() }
           : {}),
-        ...(typeof record?.status === 'string' && side === 'New'
-          ? { newFormStatus: record.status.trim().toUpperCase() }
+        ...(typeof asRecord(item)?.status === 'string' && side === 'New'
+          ? { newFormStatus: String(asRecord(item)?.status).trim().toUpperCase() }
           : {}),
       });
     }
