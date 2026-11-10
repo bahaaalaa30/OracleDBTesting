@@ -3,7 +3,7 @@ import { compareJson, type JsonComparisonResult } from './fileComparison';
 export type FormListStatus = 'MATCHED' | 'MISSING_IN_NEW' | 'NEW_IN_NEW' | 'DUPLICATE_TITLE' | 'INVALID';
 
 export function getFormListStatusLabel(status: FormListStatus): string {
-  return status === 'NEW_IN_NEW' ? 'Exist only at new' : status.replaceAll('_', ' ');
+  return status === 'NEW_IN_NEW' ? 'Exist only at new' : status.replace(/_/g, ' ');
 }
 
 export interface FormListItemResult {
