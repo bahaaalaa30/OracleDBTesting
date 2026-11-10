@@ -145,7 +145,7 @@ export function compareFormLists(oldValue: unknown, newValue: unknown, sourceFil
 
   for (const newForm of newParsed.forms) {
     if (duplicateTitles.has(newForm.title)) {
-      if (!oldParsed.forms.some((form) => form.title === newForm.title)) {
+      if (!oldTitles.has(newForm.title)) {
         items.push({ title: newForm.title, status: 'DUPLICATE_TITLE', newIndex: newForm.index, newFormStatus: newForm.formStatus, newSourceFile: newForm.sourceFile, issue: 'Title occurs more than once in New. Automatic matching was skipped.' });
       }
       continue;
@@ -154,19 +154,21 @@ export function compareFormLists(oldValue: unknown, newValue: unknown, sourceFil
   }
 
   items.push(...oldParsed.invalid, ...newParsed.invalid);
-  const matched = items.filter((item) => item.status === 'MATCHED');
+  const summary = { matched: 0, identical: 0, different: 0, missingInNew: 0, newInNew: 0, duplicateTitles: 0, invalid: 0 };
+  for (const item of items) {
+    if (item.status === 'MATCHED') {
+      summary.matched += 1;
+      if (item.differences?.diffs.length === 0) summary.identical += 1;
+      else summary.different += 1;
+    } else if (item.status === 'MISSING_IN_NEW') summary.missingInNew += 1;
+    else if (item.status === 'NEW_IN_NEW') summary.newInNew += 1;
+    else if (item.status === 'DUPLICATE_TITLE') summary.duplicateTitles += 1;
+    else if (item.status === 'INVALID') summary.invalid += 1;
+  }
   return {
     oldCount: Array.isArray(oldValue) ? oldValue.length : 0,
     newCount: Array.isArray(newValue) ? newValue.length : 0,
     items,
-    summary: {
-      matched: matched.length,
-      identical: matched.filter((item) => item.differences?.diffs.length === 0).length,
-      different: matched.filter((item) => (item.differences?.diffs.length ?? 0) > 0).length,
-      missingInNew: items.filter((item) => item.status === 'MISSING_IN_NEW').length,
-      newInNew: items.filter((item) => item.status === 'NEW_IN_NEW').length,
-      duplicateTitles: items.filter((item) => item.status === 'DUPLICATE_TITLE').length,
-      invalid: items.filter((item) => item.status === 'INVALID').length,
-    },
+    summary,
   };
 }
