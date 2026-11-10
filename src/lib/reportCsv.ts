@@ -1,4 +1,5 @@
 import { formatJsonPathForDisplay, getFormListStatusLabel, type FormListComparisonResult } from './formListComparison';
+import type { JsonComparisonResult } from './fileComparison';
 
 export interface QaScenarioCsvScenario {
   id: string;
@@ -77,6 +78,55 @@ export function buildBatchComparisonCsv(result: FormListComparisonResult): strin
       item.issue ?? '',
     ]);
   });
+
+  return serializeCsvRows(rows);
+}
+
+export interface JsonComparisonCsvOptions {
+  oldFileName: string;
+  newFileName: string;
+  profile: 'generic' | 'form-studio';
+  compareArrayOrder: boolean;
+}
+
+function jsonCsvValue(value: unknown): string {
+  if (value === undefined) return '';
+  if (value === null) return 'null';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
+
+export function buildJsonComparisonCsv(
+  result: JsonComparisonResult,
+  options: JsonComparisonCsvOptions,
+): string {
+  const rows: unknown[][] = [[
+    'Old File', 'New File', 'JSON Profile', 'Compare Array Order',
+    'Change Type', 'JSON Path', 'Old Value', 'New Value', 'Details',
+    'Added Count', 'Removed Count', 'Changed Count', 'Moved Count', 'Unchanged Count',
+  ]];
+
+  const summary = result.summary;
+  const summaryValues = [
+    summary.added, summary.removed, summary.changed, summary.moved, summary.unchanged,
+  ];
+
+  if (result.diffs.length === 0) {
+    rows.push([
+      options.oldFileName, options.newFileName, options.profile,
+      options.compareArrayOrder ? 'Yes' : 'No', 'NO DIFFERENCES', '', '', '',
+      'The two JSON files are identical for the selected comparison rules.',
+      ...summaryValues,
+    ]);
+  } else {
+    result.diffs.forEach((diff) => {
+      rows.push([
+        options.oldFileName, options.newFileName, options.profile,
+        options.compareArrayOrder ? 'Yes' : 'No', diff.kind, diff.path || '$',
+        jsonCsvValue(diff.oldValue), jsonCsvValue(diff.newValue), diff.message,
+        ...summaryValues,
+      ]);
+    });
+  }
 
   return serializeCsvRows(rows);
 }
