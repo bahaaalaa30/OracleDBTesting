@@ -45,7 +45,7 @@ function itemMatchesFilter(item: FormListItemResult, filter: StatusFilter) {
   return item.status === filter;
 }
 function FormDetails({ item, onBack }: { item: FormListItemResult; onBack: () => void }) {
-  return <Card title={item.title} description="Form-level comparison details" actions={<Button size="sm" variant="outline" onClick={onBack}><ArrowLeft size={14}/> Back to results</Button}>
+  return <Card title={item.title} description="Form-level comparison details" actions={<Button size="sm" variant="outline" onClick={onBack}><ArrowLeft size={14}/> Back to results</Button>}
     <div className="mb-4 flex flex-wrap items-center gap-2"><Badge tone={tone(item.status)}>{getFormListStatusLabel(item.status)}</Badge>{item.oldIndex !== undefined && <span className="text-xs text-slate-500">Old record #{item.oldIndex + 1}</span>}{item.newIndex !== undefined && <span className="text-xs text-slate-500">New record #{item.newIndex + 1}</span>}</div>
     {item.issue && <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{item.issue}</div>}
     {item.differences ? <>
