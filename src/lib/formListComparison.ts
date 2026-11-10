@@ -58,7 +58,7 @@ function createRecordSample(value: unknown): string {
     sample = String(value);
   }
   const maxLength = 1200;
-  return sample.length > maxLength ? `${sample.slice(0, maxLength)}\\n… (sample truncated)` : sample;
+  return sample.length > maxLength ? `${sample.slice(0, maxLength)}\n… (sample truncated)` : sample;
 }
 
 function parseForms(value: unknown, side: 'Old' | 'New', sourceFile?: string): { forms: ParsedForm[]; invalid: FormListItemResult[] } {
