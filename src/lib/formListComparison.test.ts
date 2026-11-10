@@ -74,6 +74,35 @@ describe('Form list comparison by schema title', () => {
   it('requires a JSON array for each side', () => {
     expect(() => compareFormLists({}, [])).toThrow('Old JSON must contain an array');
   });
+
+  it('compares 1,000 forms on each side and produces complete summary counts', () => {
+    const oldForms = Array.from({ length: 1000 }, (_, index) => form(`Form ${index + 1}`));
+    const newForms = Array.from({ length: 1000 }, (_, index) => form(`Form ${index + 1}`));
+    newForms[499] = form('Form 500', 'UPDATED_FIELD');
+
+    const result = compareFormLists(oldForms, newForms);
+
+    expect(result.oldCount).toBe(1000);
+    expect(result.newCount).toBe(1000);
+    expect(result.items).toHaveLength(1000);
+    expect(result.summary).toMatchObject({
+      matched: 1000,
+      identical: 999,
+      different: 1,
+      missingInNew: 0,
+      newInNew: 0,
+      duplicateTitles: 0,
+      invalid: 0,
+    });
+  });
+
+  it('handles duplicate titles across a large list without quadratic duplicate lookup', () => {
+    const duplicateForms = Array.from({ length: 500 }, () => form('Repeated title'));
+    const result = compareFormLists(duplicateForms, duplicateForms);
+
+    expect(result.summary.duplicateTitles).toBe(1000);
+    expect(result.summary.matched).toBe(0);
+  });
 });
 
 describe('Form source file tracking', () => {
