@@ -12,6 +12,15 @@ describe('Form Studio analysis input', () => {
     expect(normalizeFormAnalysisInput(forms)).toEqual(forms);
   });
 
+  it('accepts bulk analysis input containing 1,000 form records without truncation', () => {
+    const forms = Array.from({ length: 1000 }, (_, index) => ({ title: `Form ${index + 1}` }));
+    const normalized = normalizeFormAnalysisInput(forms);
+
+    expect(normalized).toHaveLength(1000);
+    expect(normalized[0]).toEqual({ title: 'Form 1' });
+    expect(normalized[999]).toEqual({ title: 'Form 1000' });
+  });
+
   it('accepts an empty array', () => {
     expect(normalizeFormAnalysisInput([])).toEqual([]);
   });
