@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareFormLists } from './formListComparison';
+import { compareFormLists, getFormListStatusLabel } from './formListComparison';
 
 const form = (title: string, fieldName = 'FIELD_1') => ({
   currentVersion: { schemaJson: JSON.stringify({ title, pages: [{ name: 'page1', elements: [{ type: 'text', name: fieldName }] }] }) },
@@ -34,5 +34,11 @@ describe('Form list comparison by schema title', () => {
 
   it('requires a JSON array for each side', () => {
     expect(() => compareFormLists({}, [])).toThrow('Old JSON must contain an array');
+  });
+});
+
+describe('Form list status labels', () => {
+  it('uses the requested readable label for forms that exist only in New', () => {
+    expect(getFormListStatusLabel('NEW_IN_NEW')).toBe('Exist only at new');
   });
 });
