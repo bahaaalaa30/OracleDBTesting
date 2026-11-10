@@ -29,7 +29,7 @@ describe('CSV report exports', () => {
       { title: 'Broken Form', scenarios: [], issue: 'Missing schema pages.' },
     ]);
 
-    expect(csv).toContain('"Form Title","Record Status","Scenario ID","Scenario","Category","Priority","Steps","Expected Result","Test Status","Actual Results","Comments","Issue"');
+    expect(csv).toContain('"Form Title","Record Status","Scenario ID","Scenario","Category","Priority","Steps","Expected Result","Actual Results","Test Status","Comments","Issue"');
     expect(csv).toContain('"Emergency Form","VALID","REQ-1","Required validation","Validation","HIGH"');
     expect(csv).toContain('"Pending","","",""');
     expect(csv).toContain('"Broken Form","INVALID"');
@@ -54,9 +54,9 @@ describe('CSV report exports', () => {
     })));
 
     statuses.forEach((status) => {
-      expect(csv).toContain(`"${status}","Observed result for ${status}","Tester note for ${status}"`);
+      expect(csv).toContain(`"Observed result for ${status}","${status}","Tester note for ${status}"`);
     });
-    expect(csv).toContain('"Test Status","Actual Results","Comments"');
+    expect(csv).toContain('"Actual Results","Test Status","Comments"');
   });
 
   it('exports batch comparison statuses, source files, difference details, and invalid issues', () => {
