@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compareFormLists } from './formListComparison';
-import { buildBatchComparisonCsv, buildQaScenariosCsv, serializeCsvRows } from './reportCsv';
+import { compareJson } from './fileComparison';
+import { buildBatchComparisonCsv, buildJsonComparisonCsv, buildQaScenariosCsv, serializeCsvRows } from './reportCsv';
 
 describe('CSV report exports', () => {
   it('escapes commas, quotes, and line breaks and includes an Excel-friendly UTF-8 BOM', () => {
@@ -57,5 +58,52 @@ describe('CSV report exports', () => {
     const invalidIssue = result.items.find((item) => item.status === 'INVALID')?.issue;
     expect(invalidIssue).toBeTruthy();
     expect(csv).toContain(String(invalidIssue));
+  });
+});
+
+describe('JSON comparison CSV export', () => {
+  it('exports each JSON difference with file names, path, values, details, and summary counts', () => {
+    const result = compareJson(
+      { title: 'Old title', pages: [{ name: 'page1' }] },
+      { title: 'New title', pages: [{ name: 'page1' }, { name: 'page2' }] },
+      { mode: 'generic' },
+    );
+    const csv = buildJsonComparisonCsv(result, {
+      oldFileName: 'old-export.json',
+      newFileName: 'new-export.json',
+      profile: 'generic',
+      compareArrayOrder: false,
+    });
+
+    expect(csv).toContain('"Old File","New File","JSON Profile","Compare Array Order","Change Type","JSON Path"');
+    expect(csv).toContain('"old-export.json","new-export.json","generic","No","CHANGED","title","Old title","New title","Value changed"');
+    expect(csv).toContain('"ADDED","pages[1]"');
+    expect(csv).toContain('"Added Count","Removed Count","Changed Count","Moved Count","Unchanged Count"');
+  });
+
+  it('exports a clear row when there are no JSON differences', () => {
+    const result = compareJson({ title: 'Same' }, { title: 'Same' });
+    const csv = buildJsonComparisonCsv(result, {
+      oldFileName: 'old.json',
+      newFileName: 'new.json',
+      profile: 'form-studio',
+      compareArrayOrder: true,
+    });
+
+    expect(csv).toContain('"old.json","new.json","form-studio","Yes","NO DIFFERENCES"');
+    expect(csv).toContain('The two JSON files are identical for the selected comparison rules.');
+  });
+
+  it('safely serializes object values in JSON difference cells', () => {
+    const result = compareJson({ settings: { enabled: false } }, { settings: { enabled: true } });
+    const csv = buildJsonComparisonCsv(result, {
+      oldFileName: 'old.json',
+      newFileName: 'new.json',
+      profile: 'generic',
+      compareArrayOrder: false,
+    });
+
+    expect(csv).toContain('"{""enabled"":false}"');
+    expect(csv).toContain('"{""enabled"":true}"');
   });
 });
