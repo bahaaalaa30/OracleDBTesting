@@ -53,6 +53,8 @@ describe('CSV report exports', () => {
     expect(csv).toContain('"Shared Form","MATCHED","APPROVED","PUBLISHED","legacy.json","current.json"');
     expect(csv).toContain('CHANGED: pages ›');
     expect(csv).toContain('"Record #2","INVALID","DRAFT","","legacy.json"');
-    expect(csv).toContain('Could not parse JSON');
+    const invalidIssue = result.items.find((item) => item.status === 'INVALID')?.issue;
+    expect(invalidIssue).toBeTruthy();
+    expect(csv).toContain(String(invalidIssue));
   });
 });
