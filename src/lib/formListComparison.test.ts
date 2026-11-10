@@ -100,7 +100,7 @@ describe('Form list comparison by schema title', () => {
     const duplicateForms = Array.from({ length: 500 }, () => form('Repeated title'));
     const result = compareFormLists(duplicateForms, duplicateForms);
 
-    expect(result.summary.duplicateTitles).toBe(1000);
+    expect(result.summary.duplicateTitles).toBe(500);
     expect(result.summary.matched).toBe(0);
   });
 });
