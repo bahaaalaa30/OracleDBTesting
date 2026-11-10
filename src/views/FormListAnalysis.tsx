@@ -73,6 +73,8 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [analysisPage, setAnalysisPage] = useState(1);
+  const analysisPageSize = 20;
   const load = (selected: File) => {
     setError('');
     setAnalyses(null);
@@ -96,6 +98,7 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
         }
       });
       setAnalyses(result);
+      setAnalysisPage(1);
       setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Analysis failed.');
@@ -113,6 +116,8 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
     'Verify initial and cleared state',
   ] : [];
   const unique = filteredAnalyses?.flatMap((form) => form.scenarios.filter((scenario) => !shared.includes(scenario.title))) ?? [];
+  const analysisPageCount = Math.max(1, Math.ceil((filteredAnalyses?.length ?? 0) / analysisPageSize));
+  const visibleAnalyses = (filteredAnalyses ?? []).slice((analysisPage - 1) * analysisPageSize, analysisPage * analysisPageSize);
   const visibleScenarioCount = filteredAnalyses?.reduce((sum, form) => sum + form.scenarios.length, 0) ?? 0;
   const visibleHighCount = filteredAnalyses?.reduce((sum, form) => sum + form.scenarios.filter((scenario) => scenario.priority === 'HIGH').length, 0) ?? 0;
   const exportCsvReport = () => {
@@ -141,19 +146,20 @@ export function FormListAnalysis({ onBack }: { onBack: () => void }) {
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4"><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{analyses.length}</div><div className="text-xs text-slate-500">Forms</div></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{visibleScenarioCount}</div><div className="text-xs text-slate-500">Scenarios</div></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{visibleHighCount}</div><div className="text-xs text-slate-500">High priority</div></div><div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800"><div className="text-2xl font-bold">{analyses.filter((form) => !!form.issue).length}</div><div className="text-xs text-slate-500">Invalid records</div></div></div>
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Priority
-          <select aria-label="Filter by priority" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
+          <select aria-label="Filter by priority" value={priorityFilter} onChange={(event) => { setPriorityFilter(event.target.value); setAnalysisPage(1); }} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
             <option value="ALL">All priorities</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
           </select>
         </label>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Category
-          <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
+          <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setAnalysisPage(1); }} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800">
             <option value="ALL">All categories</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}
           </select>
         </label>
         <p className="text-xs text-slate-500 sm:col-span-2">Showing {visibleScenarioCount} scenarios matching the selected filters.</p>
       </div>
       <div className="mb-5"><h3 className="mb-2 text-sm font-semibold">Shared scenarios</h3><ul className="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">{shared.map((item) => <li key={item}>{item}</li>)}</ul></div>
-      {(filteredAnalyses ?? analyses).map((form) => <div key={form.title} className="mb-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{form.title}</h3>{form.issue ? <Badge tone="error">INVALID</Badge> : <Badge tone="success">{form.scenarios.length} scenarios</Badge>}</div>{form.issue ? <p className="text-sm text-red-600">{form.issue}</p> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-slate-500"><th className="p-2">Scenario</th><th className="p-2">Category</th><th className="p-2">Priority</th><th className="p-2">Expected result</th></tr></thead><tbody>{form.scenarios.map((scenario) => <tr key={scenario.id} className="border-t border-slate-100 dark:border-slate-700"><td className="p-2 font-medium">{scenario.title}</td><td className="p-2">{scenario.category}</td><td className="p-2"><Badge tone={scenario.priority === 'HIGH' ? 'error' : scenario.priority === 'MEDIUM' ? 'warning' : 'info'}>{scenario.priority}</Badge></td><td className="p-2">{scenario.expected}</td></tr>)}</tbody></table>{form.scenarios.length === 0 && <p className="p-3 text-xs text-slate-500">No scenarios match the selected filters.</p>}</div>}</div>)}
+      <div className="mb-3 flex items-center justify-between text-xs text-slate-500"><span>Showing {filteredAnalyses?.length ? (analysisPage - 1) * analysisPageSize + 1 : 0}-{Math.min(analysisPage * analysisPageSize, filteredAnalyses?.length ?? 0)} of {filteredAnalyses?.length ?? 0} forms</span><div className="flex gap-2"><Button size="sm" variant="outline" disabled={analysisPage <= 1} onClick={() => setAnalysisPage((page) => page - 1)}>Previous</Button><span className="self-center">Page {analysisPage} / {analysisPageCount}</span><Button size="sm" variant="outline" disabled={analysisPage >= analysisPageCount} onClick={() => setAnalysisPage((page) => page + 1)}>Next</Button></div></div>
+      {visibleAnalyses.map((form) => <div key={form.title} className="mb-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">{form.title}</h3>{form.issue ? <Badge tone="error">INVALID</Badge> : <Badge tone="success">{form.scenarios.length} scenarios</Badge>}</div>{form.issue ? <p className="text-sm text-red-600">{form.issue}</p> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-slate-500"><th className="p-2">Scenario</th><th className="p-2">Category</th><th className="p-2">Priority</th><th className="p-2">Expected result</th></tr></thead><tbody>{form.scenarios.map((scenario) => <tr key={scenario.id} className="border-t border-slate-100 dark:border-slate-700"><td className="p-2 font-medium">{scenario.title}</td><td className="p-2">{scenario.category}</td><td className="p-2"><Badge tone={scenario.priority === 'HIGH' ? 'error' : scenario.priority === 'MEDIUM' ? 'warning' : 'info'}>{scenario.priority}</Badge></td><td className="p-2">{scenario.expected}</td></tr>)}</tbody></table>{form.scenarios.length === 0 && <p className="p-3 text-xs text-slate-500">No scenarios match the selected filters.</p>}</div>}</div>)}
       <div><h3 className="mb-2 text-sm font-semibold">Unique scenarios</h3><p className="text-xs text-slate-500">{unique.length} field-specific scenarios generated across the list.</p></div>
     </Card>}
   </div>;
