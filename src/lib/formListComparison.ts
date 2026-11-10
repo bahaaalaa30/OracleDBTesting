@@ -24,6 +24,8 @@ export interface FormListItemResult {
   sample?: string;
   oldFormStatus?: string;
   newFormStatus?: string;
+  oldSourceFile?: string;
+  newSourceFile?: string;
 }
 
 export type FormLifecycleStatusFilter = 'ALL' | 'DRAFT' | 'APPROVED' | 'PUBLISHED';
@@ -45,6 +47,7 @@ interface ParsedForm {
   schema: Record<string, unknown>;
   index: number;
   formStatus?: string;
+  sourceFile?: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -83,7 +86,7 @@ function parseForms(value: unknown, side: 'Old' | 'New', sourceFile?: string): {
       const schema = getSchema(record);
       const title = typeof schema.title === 'string' ? schema.title.trim() : '';
       if (!title) throw new Error('Schema title is missing or empty.');
-      forms.push({ title, schema, index, formStatus });
+      forms.push({ title, schema, index, formStatus, sourceFile });
     } catch (error) {
       invalid.push({
         title: `Record #${index + 1}`,
@@ -128,26 +131,26 @@ export function compareFormLists(oldValue: unknown, newValue: unknown, sourceFil
 
   for (const oldForm of oldParsed.forms) {
     if (duplicateTitles.has(oldForm.title)) {
-      items.push({ title: oldForm.title, status: 'DUPLICATE_TITLE', oldIndex: oldForm.index, oldFormStatus: oldForm.formStatus, issue: 'Title occurs more than once in Old or New. Automatic matching was skipped.' });
+      items.push({ title: oldForm.title, status: 'DUPLICATE_TITLE', oldIndex: oldForm.index, oldFormStatus: oldForm.formStatus, oldSourceFile: oldForm.sourceFile, issue: 'Title occurs more than once in Old or New. Automatic matching was skipped.' });
       continue;
     }
     const newForm = newByTitle.get(oldForm.title);
     if (!newForm) {
-      items.push({ title: oldForm.title, status: 'MISSING_IN_NEW', oldIndex: oldForm.index, oldFormStatus: oldForm.formStatus });
+      items.push({ title: oldForm.title, status: 'MISSING_IN_NEW', oldIndex: oldForm.index, oldFormStatus: oldForm.formStatus, oldSourceFile: oldForm.sourceFile });
       continue;
     }
     const differences = compareJson(oldForm.schema, newForm.schema, { mode: 'form-studio' });
-    items.push({ title: oldForm.title, status: 'MATCHED', oldIndex: oldForm.index, newIndex: newForm.index, oldFormStatus: oldForm.formStatus, newFormStatus: newForm.formStatus, differences });
+    items.push({ title: oldForm.title, status: 'MATCHED', oldIndex: oldForm.index, newIndex: newForm.index, oldFormStatus: oldForm.formStatus, newFormStatus: newForm.formStatus, oldSourceFile: oldForm.sourceFile, newSourceFile: newForm.sourceFile, differences });
   }
 
   for (const newForm of newParsed.forms) {
     if (duplicateTitles.has(newForm.title)) {
       if (!oldParsed.forms.some((form) => form.title === newForm.title)) {
-        items.push({ title: newForm.title, status: 'DUPLICATE_TITLE', newIndex: newForm.index, newFormStatus: newForm.formStatus, issue: 'Title occurs more than once in New. Automatic matching was skipped.' });
+        items.push({ title: newForm.title, status: 'DUPLICATE_TITLE', newIndex: newForm.index, newFormStatus: newForm.formStatus, newSourceFile: newForm.sourceFile, issue: 'Title occurs more than once in New. Automatic matching was skipped.' });
       }
       continue;
     }
-    if (!oldTitles.has(newForm.title)) items.push({ title: newForm.title, status: 'NEW_IN_NEW', newIndex: newForm.index, newFormStatus: newForm.formStatus });
+    if (!oldTitles.has(newForm.title)) items.push({ title: newForm.title, status: 'NEW_IN_NEW', newIndex: newForm.index, newFormStatus: newForm.formStatus, newSourceFile: newForm.sourceFile });
   }
 
   items.push(...oldParsed.invalid, ...newParsed.invalid);
