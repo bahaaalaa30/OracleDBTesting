@@ -24,7 +24,6 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white"><FileJson size={18} /></div>
         <div>
           <h1 className="text-sm font-bold leading-tight text-slate-800 dark:text-slate-100">Form Studio QA</h1>
-          <p className="text-[10px] leading-tight text-slate-400">Local JSON Analysis</p>
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
@@ -34,9 +33,6 @@ export function Sidebar() {
           </button>
         ))}
       </nav>
-      <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-        <p className="text-xs text-slate-500 dark:text-slate-400">JSON files are processed locally in your browser.</p>
-      </div>
     </aside>
   );
 }
@@ -52,7 +48,6 @@ export function Header() {
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-700 dark:bg-slate-800">
       <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{titles[view] ?? 'File Comparison'}</h2>
       <div className="flex items-center gap-3">
-        <span className="text-xs text-slate-400">Local file processing</span>
         <button onClick={toggleTheme} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="Toggle theme">
           {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
         </button>
