@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { BatchFormListComparison } from '@/views/BatchFormListComparison';
 import { FormListAnalysis } from '@/views/FormListAnalysis';
 import { compareJson, parseJsonFileContent, type JsonComparisonResult } from '@/lib/fileComparison';
+import { buildJsonComparisonCsv } from '@/lib/reportCsv';
 
 type FormMode = 'generic' | 'form-studio';
 interface LoadedFile { name: string; content: string; }
@@ -53,6 +54,7 @@ export function FileComparisonView() {
     }catch(e){setError(e instanceof Error?e.message:'JSON comparison failed');setJsonResult(null);}
   };
   const exportJson=()=>{if(jsonResult)downloadText('json-comparison-report.json',JSON.stringify(jsonResult,null,2),'application/json');};
+  const exportCsv=()=>{if(jsonResult&&oldFile&&newFile)downloadText('json-comparison-report.csv',buildJsonComparisonCsv(jsonResult,{oldFileName:oldFile.name,newFileName:newFile.name,profile:formMode,compareArrayOrder:compareOrder}),'text/csv;charset=utf-8');};
   if(batchMode)return <BatchFormListComparison onBack={()=>setBatchMode(false)}/>;
   if(analysisMode)return <FormListAnalysis onBack={()=>setAnalysisMode(false)}/>;
 
@@ -77,7 +79,7 @@ export function FileComparisonView() {
       {error&&<div role="alert" className="mt-4 flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700"><AlertCircle size={17} className="mt-0.5 shrink-0"/>{error}</div>}
       <div className="mt-5 flex flex-wrap items-center gap-3"><Button onClick={runComparison} disabled={busy||!oldFile||!newFile}><Play size={15}/> Compare JSON files</Button><span className="text-xs text-slate-400">{busy?'Reading file…':oldFile&&newFile?'Both files loaded':'Upload one Old file and one New file'}</span></div>
     </Card>
-    {jsonResult&&<Card title="JSON Comparison Results" description={`${diffs.length} differences found in the uploaded JSON files.`} actions={<Button size="sm" variant="outline" onClick={exportJson}><Download size={14}/> Export JSON</Button>}>
+    {jsonResult&&<Card title="JSON Comparison Results" description={`${diffs.length} differences found in the uploaded JSON files.`} actions={<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={exportJson}><Download size={14}/> Export JSON</Button><Button size="sm" variant="outline" onClick={exportCsv}><Download size={14}/> Export CSV</Button></div>}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Metric label="Added" value={jsonResult.summary.added} tone="success"/><Metric label="Removed" value={jsonResult.summary.removed} tone="danger"/><Metric label="Changed" value={jsonResult.summary.changed} tone="warning"/><Metric label="Moved" value={jsonResult.summary.moved} tone="info"/><Metric label="Unchanged" value={jsonResult.summary.unchanged} tone="neutral"/>
       </div>
