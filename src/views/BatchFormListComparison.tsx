@@ -113,7 +113,7 @@ export function BatchFormListComparison({ onBack }: { onBack: () => void }) {
   const filteredItems = useMemo(() => result?.items.filter((item) => itemMatchesFilter(item,statusFilter) && formStatusMatchesFilter(item,formStatusFilter)) ?? [],[result,statusFilter,formStatusFilter]);
 
   return <div className="space-y-5">
-    <Card title="Form Studio Batch Comparison" description="Upload two JSON arrays. Forms are matched only by the exact schema title, then their schemas are compared locally in your browser.">
+    <Card title="Form Studio Batch Comparison">
       <div className="grid gap-4 md:grid-cols-2"><FileDrop side="Old" file={oldFile} onFile={(file)=>void load('old',file)}/><FileDrop side="New" file={newFile} onFile={(file)=>void load('new',file)}/></div>
       <p className="mt-3 text-xs text-slate-500">Supports legacy schemaJson and currentVersion.schemaJson. No database connection or Oracle Client is used.</p>
       {error && <div role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
