@@ -31,6 +31,7 @@ export function ExplorerView() {
   const [newFilter, setNewFilter] = useState('');
   const [oldTypeFilter, setOldTypeFilter] = useState<'ALL' | ObjectType>('ALL');
   const [selectedOld, setSelectedOld] = useState<Set<string>>(new Set());
+  const [selectedNewByOld, setSelectedNewByOld] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!oldOk || !newOk) return;
@@ -75,19 +76,46 @@ export function ExplorerView() {
 
   const toggleSelect = (obj: DatabaseObject) => {
     const key = `${obj.schema}.${obj.name}`;
-    setSelectedOld((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    const autoMatch = findAutoMatch(obj);
+    if (selectedOld.has(key)) {
+      setSelectedOld((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      setSelectedNewByOld((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+    setSelectedOld((prev) => new Set(prev).add(key));
+    if (autoMatch) {
+      setSelectedNewByOld((prev) => ({ ...prev, [key]: `${autoMatch.schema}.${autoMatch.name}` }));
+    }
   };
 
   const selectAllVisible = () => {
     setSelectedOld(new Set(filteredOld.map((o) => `${o.schema}.${o.name}`)));
+    setSelectedNewByOld((prev) => {
+      const next = { ...prev };
+      filteredOld.forEach((obj) => {
+        const autoMatch = findAutoMatch(obj);
+        if (autoMatch) next[`${obj.schema}.${obj.name}`] = `${autoMatch.schema}.${autoMatch.name}`;
+      });
+      return next;
+    });
   };
 
-  const clearSelection = () => setSelectedOld(new Set());
+  const clearSelection = () => {
+    setSelectedOld(new Set());
+    setSelectedNewByOld({});
+  };
+
+  const updateTarget = (oldKey: string, newKey: string) => {
+    setSelectedNewByOld((prev) => ({ ...prev, [oldKey]: newKey }));
+  };
 
   const newTablesByName = useMemo(() => {
     const map = new Map<string, DatabaseObject>();
@@ -105,15 +133,18 @@ export function ExplorerView() {
       const [schema, name] = key.split('.');
       const oldObj = oldObjects.find((o) => o.schema === schema && o.name === name);
       if (!oldObj) continue;
-      const match = findAutoMatch(oldObj);
+      const targetKey = selectedNewByOld[key];
+      const match = newObjects.find((o) => `${o.schema}.${o.name}` === targetKey);
+      if (!match) continue;
       pairs.push({
         oldSchema: schema,
         oldTable: name,
-        newSchema: match?.schema ?? '',
-        newTable: match?.name ?? '',
+        newSchema: match.schema,
+        newTable: match.name,
       });
     }
     setSelectedTables(pairs);
+    setActiveTable(null);
     setView('structure');
   };
 
@@ -192,9 +223,9 @@ export function ExplorerView() {
       {selectedOld.size > 0 && (
         <Card
           title="Selected Tables"
-          description={`${selectedOld.size} table(s) selected from Old DB`}
+          description={`${selectedOld.size} Old table(s) selected. Choose a matching New table for each one.`}
           actions={
-            <Button size="sm" onClick={confirmSelections}>
+            <Button size="sm" onClick={confirmSelections} disabled={Array.from(selectedOld).some((key) => !selectedNewByOld[key])}>
               Compare Structure <ArrowRight size={14} />
             </Button>
           }
@@ -203,7 +234,8 @@ export function ExplorerView() {
             {Array.from(selectedOld).map((key) => {
               const [schema, name] = key.split('.');
               const oldObj = oldObjects.find((o) => o.schema === schema && o.name === name);
-              const match = oldObj ? findAutoMatch(oldObj) : undefined;
+              const targetKey = selectedNewByOld[key] ?? '';
+              const match = newObjects.find((o) => `${o.schema}.${o.name}` === targetKey);
               return (
                 <div
                   key={key}
@@ -212,13 +244,20 @@ export function ExplorerView() {
                   <Table2 size={14} className="text-slate-400" />
                   <span className="font-mono text-sm text-slate-700 dark:text-slate-200">{schema}.{name}</span>
                   <ArrowRight size={12} className="text-slate-300" />
-                  {match ? (
-                    <span className="font-mono text-sm text-slate-700 dark:text-slate-200">
-                      {match.schema}.{match.name}
-                    </span>
-                  ) : (
-                    <Badge tone="warning">No auto-match — map manually</Badge>
-                  )}
+                  <select
+                    value={targetKey}
+                    onChange={(e) => updateTarget(key, e.target.value)}
+                    aria-label={`New table for ${schema}.${name}`}
+                    className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 font-mono text-xs dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Select matching New table…</option>
+                    {newObjects.map((target) => (
+                      <option key={`${target.schema}.${target.name}`} value={`${target.schema}.${target.name}`}>
+                        {target.schema}.{target.name}
+                      </option>
+                    ))}
+                  </select>
+                  {match && <Badge tone="success">Mapped</Badge>}
                 </div>
               );
             })}

@@ -1,257 +1,141 @@
-import { useState } from 'react';
-import { FileText, Download, Filter, Trash2, FileSpreadsheet, FileDown } from 'lucide-react';
-import { useApp } from '@/context/AppContext';
+import { useMemo, useState } from 'react';
+import { Download, FileText, ArrowLeft, Eye } from 'lucide-react';
+import { buildBatchComparisonCsv } from '@/lib/reportCsv';
+import { useApp, type FormListHistoryEntry } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Checkbox, Select } from '@/components/ui/Form';
-import { EmptyState, ErrorBanner, Spinner } from '@/components/ui/Feedback';
-import { ResultStatusBadge } from '@/components/ui/Status';
-import { api } from '@/lib/api';
-import { formatDate, formatNumber, cn } from '@/lib/utils';
-import type { ComparisonType, ResultStatus } from '@/types';
+import { EmptyState } from '@/components/ui/Feedback';
+import { getFormListStatusLabel } from '@/lib/formListComparison';
+
+type StatusFilter = 'ALL' | 'MATCHED' | 'IDENTICAL' | 'DIFFERENT' | 'MISSING_IN_NEW' | 'NEW_IN_NEW' | 'DUPLICATE_TITLE' | 'INVALID';
+
+const statusTone = (status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
+  if (status === 'MATCHED') return 'success';
+  if (status === 'DUPLICATE_TITLE' || status === 'DIFFERENT') return 'warning';
+  if (status === 'NEW_IN_NEW') return 'info';
+  if (status === 'INVALID' || status === 'MISSING_IN_NEW') return 'error';
+  return 'neutral';
+};
+
+function downloadBatchCsv(run: FormListHistoryEntry) {
+  const csv = buildBatchComparisonCsv(run.result);
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'form-studio-batch-comparison-results.csv'; anchor.click(); URL.revokeObjectURL(url);
+}
 
 export function ResultsView() {
-  const { results, addResults } = useApp();
+  const { formListHistory } = useApp();
+  const [selectedRun, setSelectedRun] = useState<FormListHistoryEntry | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
-  const [filterType, setFilterType] = useState<'ALL' | ComparisonType>('ALL');
-  const [filterStatus, setFilterStatus] = useState<'ALL' | ResultStatus>('ALL');
+  const filteredItems = useMemo(() => {
+    if (!selectedRun) return [];
+    return selectedRun.result.items.filter((item) => {
+      if (statusFilter === 'ALL') return true;
+      if (statusFilter === 'IDENTICAL') return item.status === 'MATCHED' && item.differences?.diffs.length === 0;
+      if (statusFilter === 'DIFFERENT') return item.status === 'MATCHED' && (item.differences?.diffs.length ?? 0) > 0;
+      return item.status === statusFilter;
+    });
+  }, [selectedRun, statusFilter]);
 
-  const filtered = results.filter((r) => {
-    if (filterType !== 'ALL' && r.comparisonType !== filterType) return false;
-    if (filterStatus !== 'ALL' && r.status !== filterStatus) return false;
-    return true;
-  });
+  if (!selectedRun) {
+    return (
+      <div className="space-y-4">
+        <Card title="Comparison History">
+          {formListHistory.length === 0 ? (
+            <EmptyState icon={<FileText size={40} />} title="No comparison history yet" />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800"><tr>
+                  <th className="p-3 text-left">Old file</th><th className="p-3 text-left">New file</th><th className="p-3 text-left">Date</th><th className="p-3 text-center">Forms checked</th><th className="p-3 text-right">Action</th>
+                </tr></thead>
+                <tbody>{formListHistory.map((run) => (
+                  <tr key={run.id} className="border-t border-slate-100 dark:border-slate-700">
+                    <td className="p-3 text-sm">{run.oldFileName}</td><td className="p-3 text-sm">{run.newFileName}</td>
+                    <td className="p-3 text-xs text-slate-500">{new Date(run.executedAt).toLocaleString()}</td>
+                    <td className="p-3 text-center tabular-nums">{run.result.items.length}</td>
+                    <td className="p-3 text-right"><Button size="sm" variant="outline" onClick={() => { setSelectedRun(run); setStatusFilter('ALL'); }}><Eye size={14}/> View results</Button></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
-  const typeOptions = [
-    { label: 'All Types', value: 'ALL' },
-    { label: 'Table Structure', value: 'TABLE_STRUCTURE' },
-    { label: 'Table Data', value: 'TABLE_DATA' },
-    { label: 'Clinical Form Metadata', value: 'CLINICAL_FORM_METADATA' },
-    { label: 'Clinical Form Fields', value: 'CLINICAL_FORM_FIELDS' },
-    { label: 'Validation Rules', value: 'VALIDATION_RULES' },
-  ];
-
-  const statusOptions = [
-    { label: 'All Statuses', value: 'ALL' },
-    { label: 'Pass', value: 'PASS' },
-    { label: 'Fail', value: 'FAIL' },
-    { label: 'Warning', value: 'WARNING' },
-    { label: 'Blocked', value: 'BLOCKED' },
-    { label: 'Not Supported', value: 'NOT_SUPPORTED' },
+  const summary = selectedRun.result.summary;
+  const metrics: {label:string;value:number;filter:StatusFilter}[] = [
+    {label:'Matched',value:summary.matched,filter:'MATCHED'},
+    {label:'Identical',value:summary.identical,filter:'IDENTICAL'},
+    {label:'Different',value:summary.different,filter:'DIFFERENT'},
+    {label:'Missing in New',value:summary.missingInNew,filter:'MISSING_IN_NEW'},
+    {label:'Exist only at new',value:summary.newInNew,filter:'NEW_IN_NEW'},
+    {label:'Duplicate titles',value:summary.duplicateTitles,filter:'DUPLICATE_TITLE'},
+    {label:'Invalid records',value:summary.invalid,filter:'INVALID'},
   ];
 
   return (
     <div className="space-y-4">
-      <Card
-        title="Comparison History"
-        description={`${results.length} comparison(s) this session`}
-        actions={
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400" />
-            <Select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as 'ALL' | ComparisonType)}
-              options={typeOptions}
-              className="!w-40 !py-1 text-xs"
-            />
-            <Select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as 'ALL' | ResultStatus)}
-              options={statusOptions}
-              className="!w-36 !py-1 text-xs"
-            />
-          </div>
-        }
-        noPadding
-      >
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={<FileText size={40} />}
-            title="No comparison results yet"
-            description="Run a structure, data, or clinical form comparison to see results here."
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/80">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">Name</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">Type</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">Object</th>
-                  <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">Matched</th>
-                  <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">Diff</th>
-                  <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">Missing</th>
-                  <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">Extra</th>
-                  <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">Status</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const diffCount = r.summary.different + r.summary.missing + r.summary.extra;
-                  return (
-                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 dark:border-slate-700/60 dark:hover:bg-slate-700/30">
-                      <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">{r.name}</td>
-                      <td className="px-3 py-2 text-xs text-slate-500">{r.comparisonType.replace(/_/g, ' ')}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-slate-500">{r.objectName}</td>
-                      <td className="px-3 py-2 text-center text-emerald-600 tabular-nums">{formatNumber(r.summary.matched)}</td>
-                      <td className={cn('px-3 py-2 text-center tabular-nums', diffCount > 0 ? 'text-red-600' : 'text-slate-400')}>{formatNumber(r.summary.different)}</td>
-                      <td className="px-3 py-2 text-center text-red-600 tabular-nums">{formatNumber(r.summary.missing)}</td>
-                      <td className="px-3 py-2 text-center text-amber-600 tabular-nums">{formatNumber(r.summary.extra)}</td>
-                      <td className="px-3 py-2 text-center"><ResultStatusBadge status={r.status} /></td>
-                      <td className="px-3 py-2 text-xs text-slate-400">{formatDate(r.executionDate)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><Button variant="ghost" size="sm" onClick={() => setSelectedRun(null)}><ArrowLeft size={15}/> All history</Button><h2 className="mt-2 text-lg font-semibold">{selectedRun.oldFileName} <span className="text-slate-400">vs</span> {selectedRun.newFileName}</h2><p className="text-xs text-slate-500">{new Date(selectedRun.executedAt).toLocaleString()}</p></div>
+      </div>
+      <Card title="Batch Comparison Results" actions={<Button size="sm" variant="outline" onClick={() => downloadBatchCsv(selectedRun)}><Download size={14}/> Export CSV</Button>}>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+          {metrics.map((metric) => <button key={metric.filter} onClick={() => {setStatusFilter(metric.filter);}} className={`rounded-lg border p-3 text-left transition hover:border-blue-400 ${statusFilter===metric.filter?'border-blue-500 bg-blue-50 dark:bg-blue-900/20':'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800'}`}><div className="text-2xl font-bold tabular-nums">{metric.value}</div><div className="text-xs text-slate-500">{metric.label}</div></button>)}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <label className="text-xs text-slate-500" htmlFor="history-filter">Show:</label>
+          <select id="history-filter" value={statusFilter} onChange={(e)=>{setStatusFilter(e.target.value as StatusFilter);}} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900">
+            <option value="ALL">All results</option><option value="MATCHED">Matched</option><option value="IDENTICAL">Identical</option><option value="DIFFERENT">Different</option><option value="MISSING_IN_NEW">Missing in New</option><option value="NEW_IN_NEW">Exist only at new</option><option value="DUPLICATE_TITLE">Duplicate titles</option><option value="INVALID">Invalid records</option>
+          </select>
+          <span className="text-xs text-slate-400">{filteredItems.length} form(s)</span>
+        </div>
+        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+          <table className="w-full text-left text-xs"><thead className="bg-slate-50 dark:bg-slate-800"><tr><th className="p-3">Form title</th><th className="p-3">Status</th><th className="p-3">Differences</th><th className="p-3">Issue / Details</th></tr></thead>
+            <tbody>{filteredItems.map((item,index)=><tr key={`${item.title}-${index}`} className="border-t border-slate-100 dark:border-slate-700"><td className="p-3 font-medium">{item.title}</td><td className="p-3"><Badge tone={statusTone(item.status)}>{getFormListStatusLabel(item.status)}</Badge></td><td className="p-3">{item.differences?.diffs.length ?? '—'}</td><td className="max-w-lg break-words p-3">{item.issue ?? item.differences?.diffs.slice(0,4).map((diff)=>`${diff.kind}: ${diff.path}`).join(' | ') ?? (item.status==='MATCHED'?'No schema differences':'—')}</td></tr>)}</tbody>
+          </table>
+        </div>
       </Card>
-
-      {results.length > 0 && (
-        <ReportsExportPanel resultIds={results.map((r) => r.id)} />
-      )}
     </div>
   );
 }
 
 export function ReportsView() {
-  const { results, settings, updateSettings } = useApp();
+  const { formListHistory } = useApp();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const selectedRuns = formListHistory.filter((run) => selectedIds.has(run.id));
 
-  const toggle = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(selectedRuns,null,2)],{type:'application/json'});
+    downloadBlob(blob,'form-studio-comparison-reports.json');
   };
-
-  const selectAll = () => setSelectedIds(new Set(results.map((r) => r.id)));
-  const clearAll = () => setSelectedIds(new Set());
-
-  const handleExport = async (format: 'XLSX' | 'CSV' | 'PDF') => {
-    if (selectedIds.size === 0) return;
-    setExporting(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const blob = await api.exportReport({
-        resultIds: Array.from(selectedIds),
-        format,
-        maskPatientData: settings.maskPatientData,
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `comparison-report.${format.toLowerCase()}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setSuccess(`Report exported as ${format}.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Export failed');
-    } finally {
-      setExporting(false);
-    }
+  const exportCsv = () => {
+    const rows = [['Run Date','Old File','New File','Form Title','Status','Difference Count','Issue']];
+    selectedRuns.forEach((run)=>run.result.items.forEach((item)=>rows.push([new Date(run.executedAt).toISOString(),run.oldFileName,run.newFileName,item.title,getFormListStatusLabel(item.status),String(item.differences?.diffs.length ?? ''),item.issue ?? ''])));
+    const csv=rows.map((row)=>row.map((value)=>`"${String(value).replace(/"/g,'""')}"`).join(',')).join('\n');
+    downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),'form-studio-comparison-reports.csv');
   };
-
-  if (results.length === 0) {
-    return (
-      <Card>
-        <EmptyState
-          icon={<FileSpreadsheet size={40} />}
-          title="No results to export"
-          description="Run comparisons first, then export them from this screen."
-        />
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">
-      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
-      {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-700 dark:bg-emerald-900/30">
-          <p className="text-sm text-emerald-700 dark:text-emerald-300">{success}</p>
-        </div>
-      )}
-
-      <Card title="Export Settings">
-        <Checkbox
-          label="Mask patient-identifying data"
-          hint="Patient names, DOB, MRN, and other sensitive fields are masked by default in exported reports."
-          checked={settings.maskPatientData}
-          onChange={(e) => updateSettings({ maskPatientData: e.target.checked })}
-        />
-      </Card>
-
-      <Card
-        title="Select Comparisons to Export"
-        description={`${selectedIds.size} of ${results.length} selected`}
-        actions={
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={selectAll}>Select All</Button>
-            <Button variant="ghost" size="sm" onClick={clearAll}>Clear</Button>
-          </div>
-        }
-        noPadding
-      >
-        <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
-          {results.map((r) => (
-            <label key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedIds.has(r.id)}
-                onChange={() => toggle(r.id)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{r.name}</p>
-                <p className="text-xs text-slate-400">{r.objectName} • {r.comparisonType.replace(/_/g, ' ')}</p>
-              </div>
-              <ResultStatusBadge status={r.status} />
-              <span className="text-xs text-slate-400">{formatDate(r.executionDate)}</span>
-            </label>
-          ))}
-        </div>
-      </Card>
-
-      <Card title="Export Format">
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={() => handleExport('XLSX')} disabled={exporting || selectedIds.size === 0}>
-            {exporting ? <Spinner size={14} /> : <FileSpreadsheet size={16} />} Excel (.xlsx)
-          </Button>
-          <Button variant="secondary" onClick={() => handleExport('CSV')} disabled={exporting || selectedIds.size === 0}>
-            <Download size={16} /> CSV
-          </Button>
-          <Button variant="secondary" onClick={() => handleExport('PDF')} disabled={exporting || selectedIds.size === 0}>
-            <FileDown size={16} /> PDF
-          </Button>
-        </div>
-        {selectedIds.size === 0 && <p className="mt-2 text-xs text-amber-600">Select at least one comparison to export.</p>}
+      <Card title="Reports & Export">
+        {formListHistory.length===0 ? <EmptyState icon={<FileText size={40}/>} title="No reports available"/> : <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-slate-500">{selectedIds.size} of {formListHistory.length} runs selected</span><div className="flex gap-2"><Button size="sm" variant="ghost" onClick={()=>setSelectedIds(new Set(formListHistory.map((run)=>run.id)))}>Select all</Button><Button size="sm" variant="ghost" onClick={()=>setSelectedIds(new Set())}>Clear</Button></div></div>
+          <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-700 dark:border-slate-700">{formListHistory.map((run)=><label key={run.id} className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800"><input type="checkbox" checked={selectedIds.has(run.id)} onChange={()=>setSelectedIds((prev)=>{const next=new Set(prev);next.has(run.id)?next.delete(run.id):next.add(run.id);return next;})}/><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{run.oldFileName} → {run.newFileName}</span><span className="text-xs text-slate-500">{new Date(run.executedAt).toLocaleString()} · {run.result.items.length} forms · {run.result.summary.different} different</span></span></label>)}</div>
+          <div className="mt-4 flex flex-wrap gap-2"><Button onClick={exportJson} disabled={!selectedIds.size}><Download size={15}/> Export JSON</Button><Button variant="outline" onClick={exportCsv} disabled={!selectedIds.size}><Download size={15}/> Export CSV</Button></div>
+        </>}
       </Card>
     </div>
   );
 }
 
-function ReportsExportPanel({ resultIds }: { resultIds: string[] }) {
-  return (
-    <Card title="Quick Export" description="Export all results from this session">
-      <div className="flex items-center gap-3">
-        <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Go to Reports to export
-        </a>
-      </div>
-    </Card>
-  );
+function downloadBlob(blob: Blob, filename: string) {
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');
+  anchor.href=url;anchor.download=filename;anchor.click();
+  URL.revokeObjectURL(url);
 }

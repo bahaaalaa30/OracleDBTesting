@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plug, RefreshCw, Trash2, Zap, Link2, Link2Off } from 'lucide-react';
+import { Plug, RefreshCw, Trash2, Zap, Link2, Link2Off, FlaskConical } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,8 +13,22 @@ import { formatDuration } from '@/lib/utils';
 import type { ConnectionConfig, Side } from '@/types';
 
 export function ConnectionsView() {
+  const { demoMode, enableDemoMode, disableDemoMode } = useApp();
   return (
     <div className="space-y-6">
+      <Card title="Try the tool without Oracle" description="Demo mode uses built-in sample data. It does not connect to or modify any real database.">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <FlaskConical size={18} className="text-amber-500" />
+            {demoMode ? 'Demo mode is active. HIS_OLD_DEMO and HIS_NEW_DEMO are simulated.' : 'Load two sample Oracle databases to explore tables and run comparisons.'}
+          </div>
+          {demoMode ? (
+            <Button variant="outline" size="sm" onClick={disableDemoMode}>Exit Demo Mode</Button>
+          ) : (
+            <Button size="sm" onClick={enableDemoMode}><FlaskConical size={14} /> Start Demo Mode</Button>
+          )}
+        </div>
+      </Card>
       <Card title="Database Connections" description="Configure read-only Oracle connections for Old and New databases. Credentials are session-only and never persisted.">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ConnectionPanel side="old" />

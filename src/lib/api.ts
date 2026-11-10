@@ -1,5 +1,9 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import { API_BASE_URL } from './config';
+import { demoObjects, demoStructure, demoPreview, demoCompareStructure, demoCompareData } from './demoData';
+
+let demoModeEnabled = false;
+export function setApiDemoMode(enabled: boolean) { demoModeEnabled = enabled; }
 import type {
   ColumnMappingRequest,
   ComparisonResult,
@@ -65,6 +69,7 @@ export async function getConnectionStatus(): Promise<Record<'old' | 'new', Conne
 // ---------- Discovery ----------
 
 export async function getDatabaseObjects(id: 'old' | 'new', type?: string) {
+  if (demoModeEnabled) return demoObjects(id).filter(o => !type || o.type === type);
   const params: Record<string, string> = { id };
   if (type) params.type = type;
   const { data } = await apiClient.get('/database/objects', { params });
@@ -72,11 +77,13 @@ export async function getDatabaseObjects(id: 'old' | 'new', type?: string) {
 }
 
 export async function getTables(id: 'old' | 'new') {
+  if (demoModeEnabled) return demoObjects(id).filter(o => o.type === 'TABLE');
   const { data } = await apiClient.get('/database/tables', { params: { id } });
   return data;
 }
 
 export async function getViews(id: 'old' | 'new') {
+  if (demoModeEnabled) return [];
   const { data } = await apiClient.get('/database/views', { params: { id } });
   return data;
 }
@@ -86,6 +93,7 @@ export async function getTableStructure(
   schema: string,
   tableName: string,
 ) {
+  if (demoModeEnabled) return demoStructure(id, schema, tableName);
   const { data } = await apiClient.get(`/database/table/${encodeURIComponent(tableName)}/structure`, {
     params: { id, schema },
   });
@@ -119,6 +127,7 @@ export async function getTableIndexes(
 // ---------- Data ----------
 
 export async function previewData(req: DataPreviewRequest): Promise<DataPreviewResponse> {
+  if (demoModeEnabled) return demoPreview(req);
   const { data } = await apiClient.post<DataPreviewResponse>('/data/preview', req);
   return data;
 }
@@ -128,6 +137,7 @@ export async function countRows(
   schema: string,
   tableName: string,
 ): Promise<number> {
+  if (demoModeEnabled) return demoPreview({ connectionId: id, schema, tableName, page: 1, pageSize: 100000 }).totalRows;
   const { data } = await apiClient.post<{ count: number }>('/data/count', {
     id,
     schema,
@@ -137,6 +147,7 @@ export async function countRows(
 }
 
 export async function compareData(req: DataComparisonRequest): Promise<DataComparisonResult> {
+  if (demoModeEnabled) return demoCompareData(req);
   const { data } = await apiClient.post<DataComparisonResult>('/data/compare', req);
   return data;
 }
@@ -146,6 +157,7 @@ export async function compareData(req: DataComparisonRequest): Promise<DataCompa
 export async function compareStructure(
   req: StructureComparisonRequest,
 ): Promise<StructureComparisonResult> {
+  if (demoModeEnabled) return demoCompareStructure(req);
   const { data } = await apiClient.post<StructureComparisonResult>('/comparison/structure', req);
   return data;
 }
@@ -215,6 +227,15 @@ export async function exportReport(req: {
   format: 'XLSX' | 'CSV' | 'PDF';
   maskPatientData: boolean;
 }): Promise<Blob> {
+  if (demoModeEnabled) {
+    if (req.format !== 'CSV') throw new Error('Demo Mode supports CSV export. Use CSV while running with sample data.');
+    const header = 'Name,Type,Object,Matched,Different,Missing,Extra,Status,Execution Date';
+    const rows = req.resultIds.map(() => [
+      'Demo: Initial Patient Migration Check', 'TABLE_DATA', 'HIS_OLD.PATIENTS -> HIS_NEW.PATIENTS',
+      2, 1, 1, 1, 'FAIL', new Date().toISOString(),
+    ].map(value => '"' + String(value).replace(/"/g, '""') + '"').join(','));
+    return new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  }
   const { data } = await apiClient.post('/reports/export', req, { responseType: 'blob' });
   return data;
 }
