@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareFormLists, getFormListStatusLabel } from './formListComparison';
+import { compareFormLists, formatJsonPathForDisplay, getFormListStatusLabel } from './formListComparison';
 
 const form = (title: string, fieldName = 'FIELD_1') => ({
   currentVersion: { schemaJson: JSON.stringify({ title, pages: [{ name: 'page1', elements: [{ type: 'text', name: fieldName }] }] }) },
@@ -40,5 +40,17 @@ describe('Form list comparison by schema title', () => {
 describe('Form list status labels', () => {
   it('uses the requested readable label for forms that exist only in New', () => {
     expect(getFormListStatusLabel('NEW_IN_NEW')).toBe('Exist only at new');
+  });
+});
+
+
+describe('JSON path display formatting', () => {
+  it('formats Form Studio element paths as readable breadcrumbs', () => {
+    expect(formatJsonPathForDisplay('pages[section_page_1].elements[panel_1].elements[C_CHIEF1].isRequired'))
+      .toBe('pages › section_page_1 › elements › panel_1 › elements › C_CHIEF1 › isRequired');
+  });
+
+  it('preserves the root path', () => {
+    expect(formatJsonPathForDisplay('$')).toBe('$');
   });
 });
