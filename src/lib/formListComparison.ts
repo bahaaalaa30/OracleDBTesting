@@ -8,7 +8,10 @@ export function getFormListStatusLabel(status: FormListStatus): string {
 
 /** Convert technical JSON paths into readable Form Studio breadcrumbs for display only. */
 export function formatJsonPathForDisplay(path: string): string {
-  if (!path || path === '
+  if (!path || path === '$') return '$';
+  return path.replace(/\[([^\]]+)\]/g, '.$1').split('.').filter(Boolean).join(' › ');
+}
+
 export interface FormListItemResult {
   title: string;
   status: FormListStatus;
