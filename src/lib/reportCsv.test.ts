@@ -29,10 +29,34 @@ describe('CSV report exports', () => {
       { title: 'Broken Form', scenarios: [], issue: 'Missing schema pages.' },
     ]);
 
-    expect(csv).toContain('"Form Title","Record Status","Scenario ID","Scenario","Category","Priority","Steps","Expected Result","Issue"');
+    expect(csv).toContain('"Form Title","Record Status","Scenario ID","Scenario","Category","Priority","Steps","Expected Result","Test Status","Actual Results","Comments","Issue"');
     expect(csv).toContain('"Emergency Form","VALID","REQ-1","Required validation","Validation","HIGH"');
+    expect(csv).toContain('"Pending","","",""');
     expect(csv).toContain('"Broken Form","INVALID"');
     expect(csv).toContain('"Missing schema pages."');
+  });
+
+  it('exports execution status, actual results, and tester comments for a full testing report', () => {
+    const statuses = ['Pending', 'Executing', 'Pass', 'Failed', 'Ignored'] as const;
+    const csv = buildQaScenariosCsv(statuses.map((testStatus, index) => ({
+      title: 'Clinical Form',
+      scenarios: [{
+        id: `TC-${index + 1}`,
+        title: `Scenario ${index + 1}`,
+        category: 'Validation',
+        priority: 'HIGH',
+        steps: 'Execute the scenario.',
+        expected: 'Expected behavior is observed.',
+        testStatus,
+        actualResults: `Observed result for ${testStatus}`,
+        comments: `Tester note for ${testStatus}`,
+      }],
+    })));
+
+    statuses.forEach((status) => {
+      expect(csv).toContain(`"${status}","Observed result for ${status}","Tester note for ${status}"`);
+    });
+    expect(csv).toContain('"Test Status","Actual Results","Comments"');
   });
 
   it('exports batch comparison statuses, source files, difference details, and invalid issues', () => {
